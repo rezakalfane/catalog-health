@@ -7,11 +7,26 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/semantic-detail — 2026-07-07
+
+Semantic review section on the product page (per-criterion verdict + reason),
+plus judge robustness hardening for local/proxied models. Merged into `main`
+(no-ff), branch deleted after merge; hashes backfilled next entry. HISTORY.md
+entry 21.
+
+Highlights:
+
+- Judge returns `{verdict, reason}` per criterion; schema migration v4 stores
+  it (`analysis_products.semantic`); Semantic review section on the drill-down.
+- Robustness: `num_predict` bump (truncation), lenient verdict validation,
+  `parseJsonLoose` (code fences/prose), explicit output contract in the prompt
+  (models that ignore the schema), and a retry pass for batch-omitted items.
+
 ## feat/auth-multitenancy — 2026-07-07
 
 Two security/accounts features developed in one arc (entangled in db.js /
-sqlite.js, so committed together). Merged into `main` (no-ff), branch
-deleted after merge; hashes backfilled next entry. HISTORY.md entries 19–20.
+sqlite.js, so committed together). Commit `0017a3c`, merged into `main` as
+`ded4696` (no-ff), branch deleted after merge. HISTORY.md entries 19–20.
 (The `feat/token-encryption` branch had no commits of its own — the
 encryption work rode into this branch and is included here.)
 

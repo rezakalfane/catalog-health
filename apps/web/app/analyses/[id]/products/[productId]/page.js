@@ -8,6 +8,14 @@ import DimensionBars from "@/components/DimensionBars";
 import { ISSUE_INFO, issueLabel } from "@/components/issue-info";
 import { dimensionInfo } from "@/components/dimension-info";
 
+// The three questions the semantic judge answers, in display order.
+const SEMANTIC_CRITERIA = [
+  { key: "what_it_is", label: "What is it?", hint: "Is it clear what the product is and does?" },
+  { key: "who_its_for", label: "Who's it for?", hint: "Is the audience or use case clear?" },
+  { key: "made_of", label: "What's it made of?", hint: "Are materials or specs stated?" },
+];
+const VERDICT_LABEL = { yes: "Yes", partial: "Partial", no: "No" };
+
 export default function ProductDrilldownPage() {
   const { id, productId } = useParams();
   const [data, setData] = useState(null);
@@ -272,6 +280,64 @@ export default function ProductDrilldownPage() {
           </table>
         )}
       </div>
+
+      {row.semantic && (
+        <div className="card">
+          <h2>Semantic review</h2>
+          <p className="muted">
+            An LLM judged the description against three questions
+            {data.semanticJudge ? <> · {data.semanticJudge}</> : null}. It saw the
+            product name and description (below), not the images or attributes.
+          </p>
+          {row.semantic.unevaluated ? (
+            <p className="error" style={{ marginTop: 0 }}>
+              {row.semantic.what_it_is.reason}
+            </p>
+          ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Verdict</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {SEMANTIC_CRITERIA.map(({ key, label, hint }) => {
+                const c = row.semantic[key] || {};
+                return (
+                  <tr key={key}>
+                    <td>
+                      {label}
+                      <div className="muted" style={{ fontSize: "0.78rem" }}>{hint}</div>
+                    </td>
+                    <td>
+                      <span className={`verdict ${c.verdict}`}>
+                        {VERDICT_LABEL[c.verdict] || "—"}
+                      </span>
+                    </td>
+                    <td>{c.reason || "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          )}
+          <details style={{ marginTop: "0.75rem" }}>
+            <summary className="muted" style={{ cursor: "pointer" }}>
+              Text the judge evaluated
+            </summary>
+            <p style={{ marginTop: "0.5rem" }}>
+              <strong>{row.name || `#${row.id}`}</strong>
+            </p>
+            <p className="muted" style={{ fontStyle: "italic", whiteSpace: "pre-wrap" }}>
+              {row.details?.descriptionChars
+                ? `“${row.details.descriptionExcerpt}${row.details.descriptionChars > 255 ? "…" : ""}”`
+                : "(no description)"}
+            </p>
+          </details>
+        </div>
+      )}
 
       <div className="card">
         <h2>Issues ({row.issues.length})</h2>

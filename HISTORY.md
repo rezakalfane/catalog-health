@@ -358,3 +358,35 @@ user sees nothing).
 
 Still needed before deploy: a production Google OAuth client (localhost is
 dev-only) and a GRC review.
+
+## 21. Semantic review section on the product page — 2026-07-07
+
+> **Prompts:** I'd like to show a new Semantic section in a product detail
+> page, showing request and response for each semantic criterion. Would it
+> help? → Yes, let's go, keep yes/partial/no with a separate reason returned
+> by the judge. → [then three bug reports: "no description" shown despite a
+> description; "```json ... is not valid JSON"; minimax returned no result].
+
+**Summary:** The judge schema now returns, per criterion, a `{verdict, reason}`
+(kept yes/partial/no, added a one-sentence justification). The product
+drill-down gained a **Semantic review** section showing each criterion's
+question → verdict badge → reason, the judging model, and a collapsible view
+of the exact text the judge evaluated. Verdicts+reasons persist via schema
+migration v4 (`analysis_products.semantic` JSON); new analyses only.
+
+Hardened the judge for the reality of local/proxied models (found via the
+bug reports, each reproduced and fixed against real models):
+- **Truncation** — larger reason payloads overran Ollama's output cap →
+  `num_predict: 8192`.
+- **Dropped verdicts** — a missing `reason` no longer discards a valid
+  verdict (normalize instead of reject).
+- **Code fences / prose** — `parseJsonLoose` strips ```json wrappers and
+  extracts the outermost JSON object; applied to all three providers.
+- **Schema not honored** — cloud models proxied via Ollama ignore the
+  structured-output schema, so the exact output contract (shape + example)
+  now lives in the prompt too.
+- **Omitted items** — a retry pass re-judges, one at a time, any product a
+  batch response skipped (unit-tested).
+- Honest fallback: products with a description but no verdict say "the judge
+  did not return a result — try re-running", distinct from genuinely-missing
+  descriptions.

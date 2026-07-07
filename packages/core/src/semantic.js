@@ -29,11 +29,28 @@ answers three questions for a shopper who has never seen the product:
 3. made_of — does it say what the product is made of or its concrete
    specs (materials, ingredients, dimensions, technical specs)?
 
-Grade each question independently: "yes" (clearly answered), "partial"
-(hinted at but vague), or "no" (not addressed). Judge only the text given —
-do not give credit for what the product name implies. Marketing fluff
-("high-performance", "premium quality") does not answer any question.
-Return one verdict per product, keyed by the product's id.`;
+Grade each question independently with a "verdict": "yes" (clearly answered),
+"partial" (hinted at but vague), or "no" (not addressed). For each, also give
+a "reason": one concise sentence justifying the verdict, referencing what the
+description does or doesn't say. Judge only the text given — do not give
+credit for what the product name implies. Marketing fluff ("high-performance",
+"premium quality") does not answer any question.
+Return a JSON object with this EXACT shape and no other fields:
+{"verdicts":[{"id":<product id>,"what_it_is":{"verdict":"yes|partial|no","reason":"..."},"who_its_for":{"verdict":"yes|partial|no","reason":"..."},"made_of":{"verdict":"yes|partial|no","reason":"..."}}]}
+Include one entry per product, keyed by its id. Each "verdict" must be exactly
+one of "yes", "partial", or "no". Do not add any other fields (no category,
+material, strengths, etc.). Respond with raw JSON only — no markdown, no code
+fences, no commentary before or after.`;
+
+const CRITERION_SCHEMA = {
+  type: "object",
+  properties: {
+    verdict: { enum: VERDICT_VALUES },
+    reason: { type: "string" },
+  },
+  required: ["verdict", "reason"],
+  additionalProperties: false,
+};
 
 const VERDICTS_SCHEMA = {
   type: "object",
@@ -44,9 +61,9 @@ const VERDICTS_SCHEMA = {
         type: "object",
         properties: {
           id: { type: "integer" },
-          what_it_is: { enum: VERDICT_VALUES },
-          who_its_for: { enum: VERDICT_VALUES },
-          made_of: { enum: VERDICT_VALUES },
+          what_it_is: CRITERION_SCHEMA,
+          who_its_for: CRITERION_SCHEMA,
+          made_of: CRITERION_SCHEMA,
         },
         required: ["id", "what_it_is", "who_its_for", "made_of"],
         additionalProperties: false,
@@ -56,6 +73,43 @@ const VERDICTS_SCHEMA = {
   required: ["verdicts"],
   additionalProperties: false,
 };
+
+const CRITERIA = ["what_it_is", "who_its_for", "made_of"];
+
+// A verdict is usable as long as it's yes/partial/no. A missing/blank reason
+// (some smaller models omit it) must NOT discard an otherwise-valid verdict.
+function validCriterion(c) {
+  return c && VERDICT_VALUES.includes(c.verdict);
+}
+
+function normalizeCriterion(c) {
+  return { verdict: c.verdict, reason: typeof c.reason === "string" ? c.reason.trim() : "" };
+}
+
+/**
+ * Parse JSON from a model response that may be wrapped in a ```json fence or
+ * padded with prose (common with smaller/code models, even under structured
+ * output). Falls back to extracting the outermost { ... } object.
+ */
+function parseJsonLoose(text) {
+  const s = (text || "").trim();
+  try {
+    return JSON.parse(s);
+  } catch {
+    const unfenced = s
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+    try {
+      return JSON.parse(unfenced);
+    } catch {
+      const start = unfenced.indexOf("{");
+      const end = unfenced.lastIndexOf("}");
+      if (start !== -1 && end > start) return JSON.parse(unfenced.slice(start, end + 1));
+      throw new Error("No parseable JSON object in the judge response");
+    }
+  }
+}
 
 function chunkPayload(products) {
   return JSON.stringify(
@@ -71,8 +125,13 @@ function sanitizeVerdicts(raw, expectedIds) {
   const out = [];
   for (const v of raw?.verdicts || []) {
     if (!expectedIds.has(v?.id)) continue;
-    if (![v.what_it_is, v.who_its_for, v.made_of].every((x) => VERDICT_VALUES.includes(x))) continue;
-    out.push({ id: v.id, what_it_is: v.what_it_is, who_its_for: v.who_its_for, made_of: v.made_of });
+    if (!CRITERIA.every((k) => validCriterion(v[k]))) continue;
+    out.push({
+      id: v.id,
+      what_it_is: normalizeCriterion(v.what_it_is),
+      who_its_for: normalizeCriterion(v.who_its_for),
+      made_of: normalizeCriterion(v.made_of),
+    });
   }
   return out;
 }
@@ -84,7 +143,7 @@ function anthropicJudge({ apiKey, model }) {
   return async function judgeChunk(products) {
     const response = await client.messages.create({
       model,
-      max_tokens: 4000,
+      max_tokens: 8000, // reasons add output on top of the verdicts
       system: JUDGE_SYSTEM,
       output_config: { format: { type: "json_schema", schema: VERDICTS_SCHEMA } },
       messages: [{ role: "user", content: chunkPayload(products) }],
@@ -96,7 +155,7 @@ function anthropicJudge({ apiKey, model }) {
       throw new Error("Judge response was truncated (max_tokens)");
     }
     const text = response.content.find((b) => b.type === "text")?.text || "{}";
-    return sanitizeVerdicts(JSON.parse(text), new Set(products.map((p) => p.id)));
+    return sanitizeVerdicts(parseJsonLoose(text), new Set(products.map((p) => p.id)));
   };
 }
 
@@ -133,7 +192,7 @@ function openaiJudge({ apiKey, model }) {
     if (data.choices?.[0]?.finish_reason === "length") {
       throw new Error("Judge response was truncated (max tokens)");
     }
-    return sanitizeVerdicts(JSON.parse(message?.content || "{}"), new Set(products.map((p) => p.id)));
+    return sanitizeVerdicts(parseJsonLoose(message?.content || "{}"), new Set(products.map((p) => p.id)));
   };
 }
 
@@ -147,6 +206,9 @@ function ollamaJudge({ baseUrl, model }) {
         model,
         stream: false,
         format: VERDICTS_SCHEMA, // Ollama structured outputs
+        // Verdicts + reasons for a chunk can be long; the default output cap
+        // truncates the JSON and breaks parsing. Give it room.
+        options: { num_predict: 8192 },
         messages: [
           { role: "system", content: JUDGE_SYSTEM },
           { role: "user", content: chunkPayload(products) },
@@ -155,7 +217,7 @@ function ollamaJudge({ baseUrl, model }) {
     });
     if (!res.ok) throw new Error(`Ollama returned ${res.status} — is it running at ${base}?`);
     const data = await res.json();
-    return sanitizeVerdicts(JSON.parse(data.message?.content || "{}"), new Set(products.map((p) => p.id)));
+    return sanitizeVerdicts(parseJsonLoose(data.message?.content || "{}"), new Set(products.map((p) => p.id)));
   };
 }
 
@@ -168,15 +230,36 @@ function demoJudge() {
     const r = ((seed * 2654435761) >>> 0) % 100;
     return r < cutYes ? "yes" : r < cutPartial ? "partial" : "no";
   };
+  const REASONS = {
+    what_it_is: {
+      yes: "The description clearly states what the product is and does.",
+      partial: "The description gestures at what it is but stays vague.",
+      no: "The description never plainly says what the product is.",
+    },
+    who_its_for: {
+      yes: "It names a clear audience or use case for the product.",
+      partial: "An audience is only loosely implied.",
+      no: "It never says who the product is for or when to use it.",
+    },
+    made_of: {
+      yes: "Materials or concrete specs are stated.",
+      partial: "Some specs are hinted at but incomplete.",
+      no: "No materials, ingredients, or specs are given.",
+    },
+  };
+  const crit = (key, seed, cutYes, cutPartial) => {
+    const verdict = pick(seed, cutYes, cutPartial);
+    return { verdict, reason: `${REASONS[key][verdict]} (simulated demo judge)` };
+  };
   return async function judgeChunk(products) {
     return products.map((p) => {
       const len = stripHtml(p.description).length;
       const richness = Math.min(len / 600, 1); // longer demo descriptions grade better
       return {
         id: p.id,
-        what_it_is: pick(p.id * 3 + 1, 30 + richness * 50, 75),
-        who_its_for: pick(p.id * 7 + 2, 10 + richness * 40, 60),
-        made_of: pick(p.id * 11 + 3, richness * 30, 45),
+        what_it_is: crit("what_it_is", p.id * 3 + 1, 30 + richness * 50, 75),
+        who_its_for: crit("who_its_for", p.id * 7 + 2, 10 + richness * 40, 60),
+        made_of: crit("made_of", p.id * 11 + 3, richness * 30, 45),
       };
     });
   };
@@ -231,6 +314,12 @@ export async function judgeCatalog(products, { judgeChunk, onProgress, shouldAbo
     chunks.push(judgeable.slice(i, i + CHUNK_SIZE));
   }
 
+  const abort = () => {
+    if (shouldAbort?.()) {
+      throw Object.assign(new Error("cancelled by user"), { code: "semantic_cancelled" });
+    }
+  };
+
   const verdicts = new Map();
   let judged = 0;
   let nextChunk = 0;
@@ -238,15 +327,13 @@ export async function judgeCatalog(products, { judgeChunk, onProgress, shouldAbo
 
   async function worker() {
     while (nextChunk < chunks.length) {
-      if (shouldAbort?.()) {
-        throw Object.assign(new Error("cancelled by user"), { code: "semantic_cancelled" });
-      }
+      abort();
       const chunk = chunks[nextChunk++];
       try {
         for (const v of await judgeChunk(chunk)) verdicts.set(v.id, v);
       } catch (err) {
-        // Tolerate a few bad chunks (their products score as unjudged),
-        // but a systemic failure should fail the pass with the real error.
+        // Tolerate a few bad chunks (their products get retried below, and
+        // otherwise score as unjudged), but fail the pass on systemic errors.
         failures += 1;
         if (failures > Math.max(2, chunks.length * 0.2)) throw err;
       }
@@ -258,5 +345,29 @@ export async function judgeCatalog(products, { judgeChunk, onProgress, shouldAbo
   await Promise.all(
     Array.from({ length: Math.min(CONCURRENCY, chunks.length) }, worker)
   );
+
+  // Retry pass: models (especially smaller/local ones) sometimes omit some
+  // products from a batch response. Re-judge anything still missing, one at a
+  // time — a single-product request is small and reliable. Best-effort.
+  const missing = judgeable.filter((p) => !verdicts.has(p.id));
+  if (missing.length) {
+    let nextRetry = 0;
+    async function retryWorker() {
+      while (nextRetry < missing.length) {
+        abort();
+        const p = missing[nextRetry++];
+        try {
+          for (const v of await judgeChunk([p])) verdicts.set(v.id, v);
+        } catch {
+          // leave unjudged — the product shows an honest "no result" note
+        }
+        onProgress?.({ judged, total: judgeable.length, retrying: true });
+      }
+    }
+    await Promise.all(
+      Array.from({ length: Math.min(CONCURRENCY, missing.length) }, retryWorker)
+    );
+  }
+
   return verdicts;
 }

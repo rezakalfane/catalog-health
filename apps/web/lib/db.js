@@ -356,6 +356,7 @@ export function getAnalysisRows(userId, analysisId) {
       impact: r.impact,
       issues: parse(r.issues),
       details: parse(r.details),
+      semantic: parse(r.semantic),
     }));
 }
 
@@ -413,8 +414,8 @@ export function updateAnalysis(analysisId, patch) {
 
   const insertProduct = db.prepare(
     `INSERT INTO analysis_products
-       (analysis_id, product_id, name, sku, overall, grade, impact, view_count, total_sold, scores, issues, categories, details)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (analysis_id, product_id, name, sku, overall, grade, impact, view_count, total_sold, scores, issues, categories, details, semantic)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
   const run = db.transaction(() => {
     if (sets.length) {
@@ -428,7 +429,8 @@ export function updateAnalysis(analysisId, patch) {
           r.impact ?? 0, r.viewCount ?? 0, r.totalSold ?? 0,
           JSON.stringify(r.scores || {}), JSON.stringify(r.issues || []),
           JSON.stringify(r.categories || []),
-          r.details ? JSON.stringify(r.details) : null
+          r.details ? JSON.stringify(r.details) : null,
+          r.semantic ? JSON.stringify(r.semantic) : null
         );
       }
     }

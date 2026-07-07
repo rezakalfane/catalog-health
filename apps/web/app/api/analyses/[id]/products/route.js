@@ -46,6 +46,7 @@ export async function GET(request, { params }) {
     treeNames,
     treeChannels,
     channelNames,
+    semanticJudge: analysis.catalog?.semanticJudge || null,
     rows: getAnalysisRows(user.id, id),
   });
 }

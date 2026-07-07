@@ -131,9 +131,11 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
   let rows = analyzeCatalog(products, categories);
 
   // -- Stage 2b (optional): semantic pass (~64 -> ~78) -------------------------
+  let semanticJudge = null; // label of the model that judged, for the report
   if (semantic) {
     try {
       const judge = createJudge(demo ? { provider: "demo" } : getSettings(userId).llm);
+      semanticJudge = judge.label;
       setProgress(64, "semantic", "Judging descriptions…", judge.label);
       const verdicts = await judgeCatalog(products, {
         judgeChunk: judge.judgeChunk,
@@ -196,6 +198,7 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
       channelIds: t.channels || [],
     })),
     channels: channels.map((c) => ({ id: c.id, name: c.name || `Channel ${c.id}` })),
+    semanticJudge, // label of the model that produced the semantic verdicts
   };
 
   updateAnalysis(analysisId, {
