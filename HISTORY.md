@@ -271,3 +271,17 @@ and is renamed `db.json.migrated` — the user's 4 environments, 24 analyses,
 2,736 product rows, and LLM settings migrated intact. Progress updates are
 now single-row UPDATEs instead of full-file JSON rewrites. better-sqlite3 is
 declared in `serverExternalPackages` (native module).
+
+## 17. Interactive score history — 2026-07-07
+
+> **Prompt:** [screenshot] Let's improve score history: when mouse over a
+> point, show the report date, number of products, score and grade in a
+> pop-over, and go to the analysis on click.
+
+**Summary:** The Sparkline component is now interactive: hovering a point
+shows a dark tooltip with the run's date/time, product count, score, and
+grade (grade letter in its grade color); clicking navigates to that
+analysis's report. Invisible ~10px hit areas make the small dots easy to
+target, and points are keyboard-accessible. The environment page and
+dashboard pass `id`/`grade`/`productCount` with each history point; points
+without an id render as a plain non-clickable sparkline.

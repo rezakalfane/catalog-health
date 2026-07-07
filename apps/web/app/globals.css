@@ -160,6 +160,29 @@ button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem
 .dim-row .dim-fill { display: block; height: 100%; background: var(--signal); border-radius: 4px; transition: width 0.4s ease; }
 .dim-row .dim-val { width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.83rem; }
 
+/* Sparkline tooltip ------------------------------------------------------------ */
+.sparkline { position: relative; display: inline-block; }
+.spark-tip {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  background: var(--ink);
+  color: #eef1f9;
+  border-radius: 7px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 30;
+  box-shadow: 0 4px 14px rgba(19, 28, 48, 0.25);
+}
+.spark-tip-date { display: block; color: #b9c2dd; }
+.spark-grade.A { color: #5fd3a4; }
+.spark-grade.B { color: #8ed67f; }
+.spark-grade.C { color: #f2c14e; }
+.spark-grade.D { color: #f29b5e; }
+.spark-grade.F { color: #f58aa0; }
+
 /* Product table filters -------------------------------------------------------- */
 .filters {
   display: grid;

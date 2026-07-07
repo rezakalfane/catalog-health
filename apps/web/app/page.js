@@ -15,8 +15,11 @@ export default function Dashboard() {
     // oldest -> newest
     if (!historyByEnv.has(a.environmentId)) historyByEnv.set(a.environmentId, []);
     historyByEnv.get(a.environmentId).push({
+      id: a.id,
       createdAt: a.createdAt,
       overall: a.summary.overall,
+      grade: a.summary.grade,
+      productCount: a.summary.productCount,
     });
     latestByEnv.set(a.environmentId, a);
   }
