@@ -89,6 +89,8 @@ async function execute(analysisId, { environment, demo, semantic }) {
 
   // -- Stage 1: fetch (0 -> ~58) -------------------------------------------
   let products, categories;
+  let trees = [];
+  let channels = [];
   if (demo) {
     // Simulate the fetch in a few beats so the demo shows the async UX.
     setProgress(5, "fetch", "Generating demo catalog…");
@@ -100,7 +102,7 @@ async function execute(analysisId, { environment, demo, semantic }) {
     await sleep(400);
   } else {
     setProgress(2, "fetch", "Connecting to store…");
-    ({ products, categories } = await fetchCatalog({
+    ({ products, categories, trees = [], channels = [] } = await fetchCatalog({
       storeHash: environment.storeHash,
       token: environment.accessToken,
       onProgress: ({ path, page, totalPages, count }) => {
@@ -179,9 +181,27 @@ async function execute(analysisId, { environment, demo, semantic }) {
   });
   await sleep(400);
 
+  // Light catalog metadata so the UI can name categories and group them by
+  // channel tree (multi-storefront) without re-fetching the store.
+  const catalog = {
+    categories: categories.map((c) => ({
+      id: c.category_id ?? c.id,
+      name: c.name || "?",
+      treeId: c.tree_id ?? null,
+    })),
+    trees: trees.map((t) => ({
+      id: t.id,
+      name: t.name || `Tree ${t.id}`,
+      channelIds: t.channels || [],
+    })),
+    channels: channels.map((c) => ({ id: c.id, name: c.name || `Channel ${c.id}` })),
+  };
+
   updateAnalysis(analysisId, {
     status: "done",
     summary,
+    rows, // full per-product results — served via /api/analyses/[id]/products
+    catalog,
     error: null,
     progress: { percent: 100, stage: "done", label: "Analysis complete", detail: null },
   });

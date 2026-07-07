@@ -124,7 +124,7 @@ function scoreStructure(p, peerMedianCf, issues) {
   return Math.min(pts, 100);
 }
 
-function scoreTaxonomy(p, validCategoryIds, issues) {
+function scoreTaxonomy(p, validCategoryIds, treeByCat, issues) {
   const cats = p.categories || [];
   if (!cats.length) {
     issues.push("orphaned_no_category");
@@ -136,8 +136,17 @@ function scoreTaxonomy(p, validCategoryIds, issues) {
   );
   if (unknown.length) issues.push("assigned_to_missing_category");
   else pts += 25;
-  if (cats.length > THRESHOLDS.maxSaneCategories) issues.push("over_categorized");
-  else pts += 15;
+  // Over-categorization is judged per channel tree (multi-storefront):
+  // 12 assignments spread across 4 channels is 3 per channel — fine.
+  // Stores without trees (or the demo) group everything as one tree.
+  const perTree = new Map();
+  for (const c of cats) {
+    const tree = treeByCat.get(c) ?? "default";
+    perTree.set(tree, (perTree.get(tree) || 0) + 1);
+  }
+  if (Math.max(...perTree.values()) > THRESHOLDS.maxSaneCategories) {
+    issues.push("over_categorized");
+  } else pts += 15;
   return Math.min(pts, 100);
 }
 
@@ -223,6 +232,9 @@ export function analyzeCatalog(products, categories) {
   const validCategoryIds = new Set(
     categories.map((c) => c.category_id ?? c.id)
   );
+  const treeByCat = new Map(
+    categories.map((c) => [c.category_id ?? c.id, c.tree_id ?? null])
+  );
 
   // Peer baseline: median custom-field count per category
   const cfByCat = new Map();
@@ -246,7 +258,7 @@ export function analyzeCatalog(products, categories) {
     const scores = {
       content: scoreContent(p, issues),
       structure: scoreStructure(p, peer, issues),
-      taxonomy: scoreTaxonomy(p, validCategoryIds, issues),
+      taxonomy: scoreTaxonomy(p, validCategoryIds, treeByCat, issues),
       hygiene: scoreHygiene(p, issues),
       feed: scoreFeed(p, issues),
     };

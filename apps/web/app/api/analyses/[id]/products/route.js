@@ -1,0 +1,48 @@
+import { NextResponse } from "next/server";
+import { getAnalysis } from "@/lib/db";
+
+/**
+ * Full per-product results for one analysis, plus a category id -> name map
+ * (derived from the summary rollup). Filtering/sorting happens client-side.
+ */
+export async function GET(request, { params }) {
+  const { id } = await params;
+  const analysis = getAnalysis(id);
+  if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!analysis.rows?.length) {
+    return NextResponse.json(
+      { error: "This analysis has no per-product data (it predates per-product storage). Run a new analysis." },
+      { status: 404 }
+    );
+  }
+  // Prefer the analysis's stored catalog metadata (has channel trees);
+  // fall back to the summary rollup for analyses that predate it.
+  const categoryNames = analysis.catalog
+    ? Object.fromEntries(analysis.catalog.categories.map((c) => [String(c.id), c.name]))
+    : Object.fromEntries(
+        (analysis.summary?.categoryRollup || []).map((c) => [String(c.categoryId), c.categoryName])
+      );
+  const categoryTrees = analysis.catalog
+    ? Object.fromEntries(analysis.catalog.categories.map((c) => [String(c.id), c.treeId]))
+    : {};
+  const treeNames = Object.fromEntries(
+    (analysis.catalog?.trees || []).map((t) => [String(t.id), t.name])
+  );
+  const treeChannels = Object.fromEntries(
+    (analysis.catalog?.trees || []).map((t) => [String(t.id), t.channelIds || []])
+  );
+  const channelNames = Object.fromEntries(
+    (analysis.catalog?.channels || []).map((c) => [String(c.id), c.name])
+  );
+  return NextResponse.json({
+    analysisId: analysis.id,
+    environmentId: analysis.environmentId,
+    createdAt: analysis.createdAt,
+    categoryNames,
+    categoryTrees,
+    treeNames,
+    treeChannels,
+    channelNames,
+    rows: analysis.rows,
+  });
+}

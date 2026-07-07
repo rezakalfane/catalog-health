@@ -7,6 +7,23 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/product-drilldown — 2026-07-07
+
+Full product table with filters, per-product drill-down pages, and
+channel-aware taxonomy. Merged into `main` (no-ff), branch deleted after
+merge. HISTORY.md entries 12–14.
+
+Highlights:
+
+- Analyses persist full per-product rows; new products endpoint + table page
+  (search / grade / issue / category filters, six sorts, pagination) and
+  drill-down page (dimension bars with per-dimension scoring rubric
+  popovers, issues with fix hints for all 27 codes, traffic & impact).
+- Over-categorization is now judged per channel tree (multi-storefront):
+  >5 categories within one tree flags, assignments across channels don't.
+- Product page lists categories per channel (name, ID, count) using
+  `/catalog/trees` + `/v3/channels` metadata persisted with each analysis.
+
 ## feat/semantic-scoring — 2026-07-07
 
 Semantic scoring pass (LLM judge) with provider selection, plus in-progress

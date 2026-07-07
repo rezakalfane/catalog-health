@@ -66,7 +66,23 @@ export async function fetchCatalog({ storeHash, token, onProgress }) {
   } catch {
     categories = await fetchAll(storeHash, token, "/catalog/categories", {}, onProgress);
   }
-  return { products, categories };
+  // Category trees (multi-storefront channels) — names used for display and
+  // per-channel taxonomy checks. Optional: older stores may not expose it.
+  let trees = [];
+  try {
+    trees = await fetchAll(storeHash, token, "/catalog/trees", {}, onProgress);
+  } catch {
+    trees = [];
+  }
+  // Channel names for display. Optional: needs the Channels read scope —
+  // without it, the UI falls back to tree names + channel ids.
+  let channels = [];
+  try {
+    channels = await fetchAll(storeHash, token, "/channels", {}, onProgress);
+  } catch {
+    channels = [];
+  }
+  return { products, categories, trees, channels };
 }
 
 // ---------------------------------------------------------------------------

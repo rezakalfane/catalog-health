@@ -43,7 +43,8 @@ export const sectionInfo = {
         </li>
         <li>
           <strong>Taxonomy (15%)</strong> — orphaned products, missing
-          categories, over-categorization.
+          categories, over-categorization (judged per channel tree on
+          multi-storefront stores).
         </li>
         <li>
           <strong>Hygiene (20%)</strong> — zero prices, sale ≥ regular price,

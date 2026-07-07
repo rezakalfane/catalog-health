@@ -78,9 +78,16 @@ export default function AnalysisPage() {
           </div>
         )}
         {status === "done" && analysis && (
-          <Link className="btn" href={envHref}>
-            {isDemo ? "Back to dashboard" : "View environment"}
-          </Link>
+          <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+            {analysis.hasRows && (
+              <Link className="btn secondary" href={`/analyses/${id}/products`}>
+                All products
+              </Link>
+            )}
+            <Link className="btn" href={envHref}>
+              {isDemo ? "Back to dashboard" : "View environment"}
+            </Link>
+          </div>
         )}
       </div>
 

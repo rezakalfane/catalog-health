@@ -163,6 +163,17 @@ export function getAnalysis(analysisId) {
   return load().analyses.find((a) => a.id === analysisId) || null;
 }
 
+/**
+ * Drop the per-product rows before sending an analysis over the API — they
+ * can be megabytes on large catalogs and the report pages only need the
+ * summary. Rows are served by /api/analyses/[id]/products.
+ */
+export function redactAnalysis(analysis) {
+  if (!analysis) return null;
+  const { rows, catalog, ...rest } = analysis;
+  return { ...rest, hasRows: Boolean(rows?.length) };
+}
+
 export function createAnalysis({ environmentId, summary = null, status = "done", progress = null }) {
   const db = load();
   const analysis = {
