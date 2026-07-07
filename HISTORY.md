@@ -239,3 +239,16 @@ channel's category list, and a count highlighted red past the 5-category
 threshold. Trees serving several channels render one row per channel;
 single-tree stores and old analyses keep the flat list. Verified against the
 real store (5 trees / 5 named channels).
+
+## 15. Docs sync — 2026-07-07
+
+> **Prompt:** Check that all .md files are up to date, update if needed and
+> commit to main.
+
+**Summary:** README: requirements now mention the optional Channel-settings
+scope (channel names) and the optional LLM key/Ollama for semantic scoring;
+the taxonomy dimension row notes per-channel-tree judging; the security note
+covers LLM API keys living in `data/db.json` alongside store tokens.
+CHANGELOG: backfilled commit/merge hashes for chore/changelog,
+feat/semantic-scoring, and feat/product-drilldown. Committed directly to
+main (docs-only chore, at the user's direction).

@@ -19,7 +19,11 @@ apps/web        Next.js app — manage environments (stores), run analyses,
 
 - Node.js >= 18.18 (uses native `fetch`)
 - A BigCommerce API token per store with **Products: read-only** scope
-  (the tool only issues GET requests)
+  (the tool only issues GET requests). Optional: a **Channel settings:
+  read-only** scope lets reports show channel names instead of tree ids.
+- Optional, for semantic scoring: an Anthropic or OpenAI API key, or a
+  local [Ollama](https://ollama.com) install (free) — configured under
+  **Settings** in the web app.
 
 ## Setup
 
@@ -76,7 +80,7 @@ npm run dev
 |---|---|---|
 | content | 25% | description depth, image count, alt text, title quality, brand |
 | structure | 25% | custom fields **vs category peers**, GTIN/UPC/MPN, variant completeness |
-| taxonomy | 15% | orphaned products, missing categories, over-categorization |
+| taxonomy | 15% | orphaned products, missing categories, over-categorization (judged per channel tree on multi-storefront stores) |
 | hygiene | 20% | zero prices, sale >= regular price, missing weight, visible-but-OOS |
 | feed | 15% | minimum field set for Google Shopping / AI-agent feeds |
 
@@ -102,9 +106,9 @@ Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
   `apps/web/lib/db.js` — a deliberately thin JSON-file store meant to be
   swapped for SQLite/Postgres later. Every consumer goes through that module,
   so the swap is contained.
-- `data/` is **gitignored because it contains store API tokens in plain
-  text**. Fine for a local skeleton; before any shared deployment, move
-  tokens to a secrets manager and encrypt at rest.
+- `data/` is **gitignored because it contains store API tokens and LLM API
+  keys in plain text**. Fine for a local skeleton; before any shared
+  deployment, move secrets to a secrets manager and encrypt at rest.
 - There is **no authentication** on the web app yet. Do not expose it beyond
   localhost as-is.
 - Company policy: no PII into Claude when developing against real catalogs,

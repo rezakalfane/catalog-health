@@ -10,8 +10,8 @@ merged. For the prompt-by-prompt evolution of the tool, see
 ## feat/product-drilldown — 2026-07-07
 
 Full product table with filters, per-product drill-down pages, and
-channel-aware taxonomy. Merged into `main` (no-ff), branch deleted after
-merge. HISTORY.md entries 12–14.
+channel-aware taxonomy. Commit `2a4f7ed`, merged into `main` as `80b42b3`
+(no-ff), branch deleted after merge. HISTORY.md entries 12–14.
 
 Highlights:
 
@@ -27,8 +27,8 @@ Highlights:
 ## feat/semantic-scoring — 2026-07-07
 
 Semantic scoring pass (LLM judge) with provider selection, plus in-progress
-UX improvements found while testing. Merged into `main` (no-ff), branch
-deleted after merge. HISTORY.md entries 7–11.
+UX improvements found while testing. Commit `0c73369`, merged into `main`
+as `c52368f` (no-ff), branch deleted after merge. HISTORY.md entries 7–11.
 
 Highlights:
 
@@ -49,8 +49,9 @@ Highlights:
 ## chore/changelog — 2026-07-07
 
 Add this CHANGELOG.md tracking branches, commits, and merges, and log the
-change in HISTORY.md. (Hashes for a branch's own entry aren't known until it
-is committed — fill them in, or don't, in the next entry.)
+change in HISTORY.md. Commit `22d57b8`, merged into `main` as `ba76ab5`
+(no-ff). (Hashes for a branch's own entry aren't known until it is
+committed — they get backfilled later.)
 
 ## feat/async-analysis-ux — 2026-07-07
 
