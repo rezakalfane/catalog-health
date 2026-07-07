@@ -117,3 +117,80 @@ branch (newest first) listing its commits, the merge commit into `main`, and
 highlights — starting with the initial commit and `feat/async-analysis-ux`.
 Complements HISTORY.md: CHANGELOG.md tracks the git-level history, HISTORY.md
 the prompt-by-prompt evolution; each references the other.
+
+## 7. Semantic scoring pass (LLM judge) — 2026-07-07
+
+> **Prompts:** (a) Let's implement Semantic scoring pass (LLM judges whether
+> descriptions answer "what is it, who's it for, what's it made of"). First,
+> how are you going to implement this feature? Which model? How is it
+> implemented? (b) Can we use Opus 4.8 but in the settings of the app, be
+> able to choose which model, connect it and use it? What's best so user can
+> choose, and even use a free model? (c) Let's go.
+
+**Summary:** Optional 6th scoring dimension "semantic" (15%, the five
+heuristic dimensions scale by 0.85): an LLM grades each description on three
+criteria — what is it (50 pts), who's it for (25), what's it made of (25) —
+as yes/partial/no, adding `desc_*` issues for failures.
+
+- `packages/core/src/semantic.js` — provider-pluggable judge: **Anthropic**
+  (official SDK, structured outputs via `output_config.format`, default
+  `claude-opus-4-8`) and **Ollama** (local, free, JSON-schema format mode),
+  plus a deterministic **demo** judge (no API, no cost). `judgeCatalog`
+  chunks 10 products/request, 4 concurrent, skips products without real
+  descriptions, tolerates isolated chunk failures.
+- **Settings page** (`/settings`) + `GET/PUT /api/settings` +
+  `POST /api/settings/test`: pick provider, connect (key stored write-only
+  like store tokens; `ANTHROPIC_API_KEY` env fallback), "Connect & list
+  models" pulls the live model list (Anthropic Models API / Ollama tags).
+- Runner gained a "Judging descriptions… (n/total)" progress stage; judge
+  failures degrade to the 5-dimension report with a warning card instead of
+  failing the run. New Analysis page: "Include semantic scoring" checkbox.
+- Verified: demo run produced the semantic dimension + issues; real Ollama
+  path (qwen2.5-coder:7b) graded a fluff description all-no, detailed ones
+  all-yes.
+
+## 8. Live in-progress report on the environment page — 2026-07-07
+
+> **Prompt:** When launching an analysis, I can see the score card with
+> skeletons. But when navigating to other pages and then back to the
+> environment with an analysis in progress, I don't see the skeleton any
+> longer, but the latest analysis. The progress section is ok.
+
+**Summary:** Extracted the polling skeleton report from the analysis page
+into a shared `components/AnalysisLiveReport.js`. The environment page now
+renders it whenever a run is in progress (instead of the stale latest
+report), so navigating away and back keeps the live filling-in view. The
+Analysis history table stays visible during a run.
+
+## 9. Clickable analysis history — 2026-07-07
+
+> **Prompt:** Can you make items in the History clickable to we can navigate
+> between sessions, including analysis in progress?
+
+**Summary:** Analysis history rows (environment page) and Recent analyses
+rows (dashboard) now link to that run's own `/analyses/[id]` page — each past
+analysis is a browsable session with its full report. An in-progress run
+appears as the top history row ("· in progress") linking to the live view.
+
+## 10. OpenAI as a judge provider — 2026-07-07
+
+> **Prompt:** Can you add OpenAI as a judge provider?
+
+**Summary:** Third provider next to Anthropic and Ollama: Chat Completions
+via plain fetch with strict structured outputs (same verdict schema),
+`OPENAI_API_KEY` env fallback, model list from `/v1/models` filtered to chat
+models. Key hygiene: switching provider deletes the stored key, and the test
+endpoint only reuses a stored key for its own provider.
+
+## 11. Cancel semantic scoring mid-run — 2026-07-07
+
+> **Prompt:** Semantic judging can be long, add a "cancel semantic scoring"
+> below the progress bar to skip it and show the result without semantic
+> scoring.
+
+**Summary:** During the semantic stage the analysis page shows "Cancel
+semantic scoring (keep the rest)" under the progress bar. It calls
+`POST /api/analyses/[id]/skip-semantic`; the judge loop aborts between
+chunks and the run completes with the 5 heuristic dimensions plus a
+"cancelled" note (partial verdicts are discarded so all products are scored
+by the same formula). Verified end-to-end on a demo run.

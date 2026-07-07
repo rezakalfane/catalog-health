@@ -11,6 +11,8 @@ function NewAnalysisForm() {
   const [selected, setSelected] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [llm, setLlm] = useState(null);
+  const [semantic, setSemantic] = useState(true);
 
   useEffect(() => {
     fetch("/api/environments")
@@ -21,6 +23,9 @@ function NewAnalysisForm() {
         const preselected = envs.find((env) => env.id === preselectedEnv);
         setSelected(preselected ? preselected.id : envs[0].id);
       });
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then(({ llm }) => setLlm(llm));
   }, [preselectedEnv]);
 
   async function run(demo = false) {
@@ -29,7 +34,11 @@ function NewAnalysisForm() {
     const res = await fetch("/api/analyses", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(demo ? { demo: true } : { environmentId: selected }),
+      body: JSON.stringify(
+        demo
+          ? { demo: true, semantic }
+          : { environmentId: selected, semantic: semantic && Boolean(llm?.configured) }
+      ),
     });
     const body = await res.json().catch(() => ({}));
     if (res.status === 409 && body.analysisId) {
@@ -78,6 +87,27 @@ function NewAnalysisForm() {
                 </option>
               ))}
             </select>
+            {llm?.configured ? (
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 400 }}>
+                <input
+                  type="checkbox"
+                  checked={semantic}
+                  onChange={(e) => setSemantic(e.target.checked)}
+                  style={{ width: "auto", margin: 0 }}
+                />
+                Include semantic scoring — {llm.model}
+                {llm.provider === "ollama"
+                  ? " via Ollama (free, local)"
+                  : llm.provider === "openai"
+                    ? " via the OpenAI API"
+                    : " via the Claude API"}
+              </label>
+            ) : (
+              <p className="muted">
+                Semantic scoring (LLM judges description quality) is available
+                once a model is connected under <a href="/settings">Settings</a>.
+              </p>
+            )}
             <button onClick={() => run(false)} disabled={running || !selected}>
               {running ? "Starting…" : "Run analysis"}
             </button>
@@ -90,7 +120,8 @@ function NewAnalysisForm() {
         <h2>Or try it with demo data</h2>
         <p className="muted">
           Runs against a synthetic 120-product catalog — no store or credentials
-          needed. Useful for demos and for checking the tool works.
+          needed. Useful for demos and for checking the tool works. Semantic
+          scoring uses a simulated judge here (free, no API calls).
         </p>
         <button className="secondary" onClick={() => run(true)} disabled={running}>
           {running ? "Starting…" : "Run demo analysis"}

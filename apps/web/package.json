@@ -8,10 +8,13 @@
     "start": "next start"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.110.0",
     "@catalog-health/core": "*",
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
-  "engines": { "node": ">=18.18" }
+  "engines": {
+    "node": ">=18.18"
+  }
 }

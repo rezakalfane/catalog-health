@@ -1,9 +1,17 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getEnvironment, listCompletedAnalyses, redactEnvironment } from "@/lib/db";
+import {
+  getEnvironment,
+  listCompletedAnalyses,
+  findRunningAnalysis,
+  redactEnvironment,
+} from "@/lib/db";
+import { reconcileInterruptedAnalyses } from "@/lib/analysis-runner";
 import GradeLozenge from "@/components/GradeLozenge";
 import DimensionBars from "@/components/DimensionBars";
 import Sparkline from "@/components/Sparkline";
 import RunAnalysisAction from "@/components/RunAnalysisAction";
+import AnalysisLiveReport from "@/components/AnalysisLiveReport";
 import InfoPopover from "@/components/InfoPopover";
 import { sectionInfo } from "@/components/section-info";
 
@@ -14,6 +22,8 @@ export default async function EnvironmentDetail({ params }) {
   const env = redactEnvironment(getEnvironment(id));
   if (!env) notFound();
 
+  reconcileInterruptedAnalyses();
+  const runningAnalysis = findRunningAnalysis(id);
   const analyses = listCompletedAnalyses(id); // newest first
   const latest = analyses[0];
   const history = [...analyses]
@@ -30,7 +40,12 @@ export default async function EnvironmentDetail({ params }) {
         <RunAnalysisAction environmentId={env.id} />
       </div>
 
-      {!latest ? (
+      {runningAnalysis ? (
+        // A run is in progress: show it live (skeletons filling in) instead
+        // of the stale latest report. RunAnalysisAction refreshes the page
+        // when the run finishes.
+        <AnalysisLiveReport analysisId={runningAnalysis.id} />
+      ) : !latest ? (
         <div className="card">
           <h2>No analyses yet</h2>
           <p className="muted">
@@ -162,35 +177,55 @@ export default async function EnvironmentDetail({ params }) {
             </table>
           </div>
 
-          <div className="card">
-            <h2>
-              Analysis history
-              <InfoPopover title="Analysis history">{sectionInfo.analysisHistory}</InfoPopover>
-            </h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Products</th>
-                  <th>Score</th>
-                  <th>Grade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analyses.map((a) => (
-                  <tr key={a.id}>
-                    <td>{new Date(a.createdAt).toLocaleString()}</td>
-                    <td>{a.summary.productCount}</td>
-                    <td>{a.summary.overall}</td>
-                    <td>
-                      <GradeLozenge grade={a.summary.grade} small />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         </>
+      )}
+
+      {(analyses.length > 0 || runningAnalysis) && (
+        <div className="card">
+          <h2>
+            Analysis history
+            <InfoPopover title="Analysis history">{sectionInfo.analysisHistory}</InfoPopover>
+          </h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Products</th>
+                <th>Score</th>
+                <th>Grade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {runningAnalysis && (
+                <tr key={runningAnalysis.id}>
+                  <td>
+                    <Link href={`/analyses/${runningAnalysis.id}`}>
+                      {new Date(runningAnalysis.createdAt).toLocaleString()}
+                    </Link>{" "}
+                    <span className="muted">· in progress</span>
+                  </td>
+                  <td className="muted">—</td>
+                  <td className="muted">—</td>
+                  <td className="muted">—</td>
+                </tr>
+              )}
+              {analyses.map((a) => (
+                <tr key={a.id}>
+                  <td>
+                    <Link href={`/analyses/${a.id}`}>
+                      {new Date(a.createdAt).toLocaleString()}
+                    </Link>
+                  </td>
+                  <td>{a.summary.productCount}</td>
+                  <td>{a.summary.overall}</td>
+                  <td>
+                    <GradeLozenge grade={a.summary.grade} small />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );

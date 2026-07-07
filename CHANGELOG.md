@@ -7,6 +7,28 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/semantic-scoring — 2026-07-07
+
+Semantic scoring pass (LLM judge) with provider selection, plus in-progress
+UX improvements found while testing. Merged into `main` (no-ff), branch
+deleted after merge. HISTORY.md entries 7–11.
+
+Highlights:
+
+- Optional 6th "semantic" dimension (15%): LLM judges whether descriptions
+  answer *what is it / who's it for / what's it made of*; `desc_*` issues.
+- Provider-pluggable judge in `packages/core/src/semantic.js`: Anthropic
+  (default `claude-opus-4-8`, structured outputs), OpenAI, Ollama (local,
+  free), demo (simulated, free). Judge failures degrade to the 5-dimension
+  report with a warning instead of failing the run.
+- New Settings page: connect a provider (keys write-only; env fallbacks),
+  live model list, save model choice. New Analysis page gained an "Include
+  semantic scoring" checkbox; runner gained a judging progress stage and a
+  "Cancel semantic scoring" action (`POST /api/analyses/[id]/skip-semantic`).
+- Environment page now shows the live skeleton report while a run is in
+  progress (shared `AnalysisLiveReport`); history rows link to each
+  analysis's own page, including the in-progress one.
+
 ## chore/changelog — 2026-07-07
 
 Add this CHANGELOG.md tracking branches, commits, and merges, and log the

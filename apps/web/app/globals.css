@@ -175,6 +175,17 @@ button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem
 .progress-track { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
 .progress-fill { height: 100%; background: var(--signal); border-radius: 4px; transition: width 0.5s ease; }
 .progress-detail { color: var(--ink-soft); font-size: 0.78rem; margin-top: 0.25rem; }
+.link-btn {
+  background: transparent;
+  color: var(--signal);
+  padding: 0;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.link-btn:hover { filter: none; text-decoration: underline; }
+.link-btn:disabled { color: var(--ink-soft); text-decoration: none; }
+
 a.progress-link { display: block; color: inherit; }
 a.progress-link:hover { text-decoration: none; }
 a.progress-link:hover .progress-top { color: var(--signal); }

@@ -59,6 +59,12 @@ npm run dev
 - **Dashboard / environment pages** — latest grade, score sparkline over
   time, dimension breakdown, most common issues, weakest categories, and the
   impact-weighted top-fix list.
+- **Settings** — connect an LLM for the optional semantic scoring pass:
+  Anthropic (Claude, default `claude-opus-4-8`), OpenAI, or Ollama (local
+  models, free, data never leaves the machine). API keys are stored
+  write-only like store tokens (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` env
+  vars work as fallbacks). "Connect & list models" pulls the live model list
+  from the provider.
 
 ## The five scoring dimensions
 
@@ -73,7 +79,18 @@ npm run dev
 Impact score = `(100 - score) x log(1 + views + 5*sales)` using `view_count`
 and `total_sold` from the product record — no Orders scope needed.
 
-Weights and thresholds live in `packages/core/src/scoring.js`.
+**Optional 6th dimension — semantic (15%)**: an LLM judges whether each
+description answers *what is it, who's it for, what's it made of*
+(`yes`/`partial`/`no` per criterion; what-is-it counts double). When enabled,
+the five heuristic dimensions scale down proportionally to make room. Failing
+criteria add `desc_*` issues to the report. Products without a description
+score 0 without spending tokens; demo analyses use a free simulated judge.
+Configure the provider/model under **Settings**; enable per-run on the New
+Analysis page. If the pass fails mid-run the analysis degrades gracefully to
+the 5-dimension report with a warning.
+
+Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
+`packages/core/src/semantic.js`.
 
 ## Data & security notes
 
@@ -92,8 +109,9 @@ Weights and thresholds live in `packages/core/src/scoring.js`.
 
 ## Roadmap ideas
 
-- [ ] Semantic scoring pass (LLM judges whether descriptions answer
-      "what is it, who's it for, what's it made of")
+- [x] Semantic scoring pass (LLM judges whether descriptions answer
+      "what is it, who's it for, what's it made of") — Anthropic or Ollama,
+      configured in Settings. CLI `--semantic` flag still to do.
 - [x] Async analysis jobs with progress
       (in-process runner — jobs don't survive a server restart; they're marked
       failed. A real queue is only needed if this outgrows one process)

@@ -15,7 +15,7 @@ function load() {
   try {
     return JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
   } catch {
-    return { environments: [], analyses: [] };
+    return { environments: [], analyses: [], settings: {} };
   }
 }
 
@@ -25,6 +25,55 @@ function save(db) {
 }
 
 const id = () => crypto.randomUUID();
+
+// -- Settings ----------------------------------------------------------------
+//
+// settings.llm = { provider: "anthropic" | "ollama", model, apiKey, baseUrl }
+// The API key is write-only towards the browser, like store tokens.
+
+export function getSettings() {
+  return load().settings || {};
+}
+
+/** Env-var API key fallback for a provider (Ollama needs none). */
+export function envKeyFor(provider) {
+  if (provider === "anthropic") return process.env.ANTHROPIC_API_KEY || null;
+  if (provider === "openai") return process.env.OPENAI_API_KEY || null;
+  return null;
+}
+
+/** Merge an LLM settings patch. An empty/absent apiKey keeps the stored one. */
+export function updateLlmSettings(patch) {
+  const db = load();
+  db.settings = db.settings || {};
+  const llm = db.settings.llm || {};
+  // A key saved for one provider must never be sent to another.
+  if (patch.provider && patch.provider !== llm.provider) delete llm.apiKey;
+  for (const key of ["provider", "model", "baseUrl"]) {
+    if (patch[key] !== undefined) llm[key] = patch[key];
+  }
+  if (patch.apiKey) llm.apiKey = patch.apiKey;
+  db.settings.llm = llm;
+  save(db);
+  return llm;
+}
+
+/** LLM settings safe to send to the client. */
+export function redactLlmSettings(settings = getSettings()) {
+  const { apiKey, ...rest } = settings.llm || {};
+  const provider = rest.provider || "anthropic";
+  const envKey = envKeyFor(provider);
+  const hasKey = Boolean(apiKey || envKey);
+  const configured =
+    provider === "ollama" ? Boolean(rest.model) : Boolean(rest.model && hasKey);
+  return {
+    ...rest,
+    provider,
+    hasKey,
+    keyFromEnv: Boolean(!apiKey && envKey),
+    configured,
+  };
+}
 
 // -- Environments -----------------------------------------------------------
 
