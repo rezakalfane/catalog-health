@@ -9,18 +9,111 @@
  */
 import crypto from "node:crypto";
 import { getDb } from "@/lib/sqlite";
+import {
+  encryptSecret,
+  decryptSecret,
+  isEncrypted,
+  hasEncryptionKey,
+} from "@/lib/crypto";
 
 const id = () => crypto.randomUUID();
 const parse = (s) => (s == null ? null : JSON.parse(s));
 
+// -- Encryption at rest ------------------------------------------------------
+//
+// Secrets (store access tokens, LLM API keys) are encrypted in the DB when
+// APP_ENCRYPTION_KEY is set. On first access we sweep any legacy plaintext
+// rows into ciphertext, then reclaim freed pages so the old plaintext doesn't
+// linger in the file/WAL. Idempotent: already-encrypted values are skipped.
+
+let secretsSwept = false;
+
+function secureDb() {
+  const conn = getDb();
+  if (secretsSwept || !hasEncryptionKey()) return conn;
+
+  let changed = 0;
+  const sweep = conn.transaction(() => {
+    for (const e of conn.prepare("SELECT id, access_token FROM environments").all()) {
+      if (e.access_token && !isEncrypted(e.access_token)) {
+        conn
+          .prepare("UPDATE environments SET access_token = ? WHERE id = ?")
+          .run(encryptSecret(e.access_token), e.id);
+        changed += 1;
+      }
+    }
+    const s = conn.prepare("SELECT value FROM settings WHERE key = 'llm'").get();
+    if (s) {
+      const llm = JSON.parse(s.value);
+      if (llm.apiKey && !isEncrypted(llm.apiKey)) {
+        llm.apiKey = encryptSecret(llm.apiKey);
+        conn.prepare("UPDATE settings SET value = ? WHERE key = 'llm'").run(JSON.stringify(llm));
+        changed += 1;
+      }
+    }
+  });
+  sweep();
+
+  if (changed > 0) {
+    // Purge old plaintext bytes from freed pages and the WAL.
+    conn.pragma("wal_checkpoint(TRUNCATE)");
+    conn.exec("VACUUM");
+  }
+  secretsSwept = true;
+  return conn;
+}
+
+// -- Users -------------------------------------------------------------------
+
+function toUser(row) {
+  if (!row) return null;
+  return { id: row.id, email: row.email, name: row.name, createdAt: row.created_at };
+}
+
+/**
+ * Look up a user by email, creating one on first sign-in. The very first user
+ * created also claims all orphaned pre-auth data (environments/analyses with
+ * no owner, and the global settings row), so existing data isn't stranded.
+ */
+export function getOrCreateUser({ email, name }) {
+  const conn = getDb();
+  const key = String(email).trim().toLowerCase();
+  const existing = conn.prepare("SELECT * FROM users WHERE email = ?").get(key);
+  if (existing) return toUser(existing);
+
+  const isFirst = conn.prepare("SELECT COUNT(*) AS n FROM users").get().n === 0;
+  const user = {
+    id: id(),
+    email: key,
+    name: name || key,
+    createdAt: new Date().toISOString(),
+  };
+  const create = conn.transaction(() => {
+    conn
+      .prepare("INSERT INTO users (id, email, name, created_at) VALUES (@id, @email, @name, @createdAt)")
+      .run(user);
+    if (isFirst) {
+      conn.prepare("UPDATE environments SET user_id = ? WHERE user_id IS NULL").run(user.id);
+      conn.prepare("UPDATE analyses SET user_id = ? WHERE user_id IS NULL").run(user.id);
+      conn.prepare("UPDATE settings SET user_id = ? WHERE user_id = ''").run(user.id);
+    }
+  });
+  create();
+  return toUser(user);
+}
+
 // -- Settings ----------------------------------------------------------------
 //
 // settings.llm = { provider: "anthropic" | "openai" | "ollama", model, apiKey, baseUrl }
-// The API key is write-only towards the browser, like store tokens.
+// Per user. The API key is write-only towards the browser, like store tokens.
 
-export function getSettings() {
-  const rows = getDb().prepare("SELECT key, value FROM settings").all();
-  return Object.fromEntries(rows.map((r) => [r.key, parse(r.value)]));
+export function getSettings(userId) {
+  const rows = secureDb()
+    .prepare("SELECT key, value FROM settings WHERE user_id = ?")
+    .all(userId);
+  const out = Object.fromEntries(rows.map((r) => [r.key, parse(r.value)]));
+  if (out.llm?.apiKey) out.llm.apiKey = decryptSecret(out.llm.apiKey);
+  return out;
 }
 
 /** Env-var API key fallback for a provider (Ollama needs none). */
@@ -31,25 +124,28 @@ export function envKeyFor(provider) {
 }
 
 /** Merge an LLM settings patch. An empty/absent apiKey keeps the stored one. */
-export function updateLlmSettings(patch) {
-  const db = getDb();
-  const llm = getSettings().llm || {};
+export function updateLlmSettings(userId, patch) {
+  const db = secureDb();
+  const llm = getSettings(userId).llm || {}; // apiKey decrypted (if any)
   // A key saved for one provider must never be sent to another.
   if (patch.provider && patch.provider !== llm.provider) delete llm.apiKey;
   for (const key of ["provider", "model", "baseUrl"]) {
     if (patch[key] !== undefined) llm[key] = patch[key];
   }
   if (patch.apiKey) llm.apiKey = patch.apiKey;
+  // Encrypt only the apiKey field; provider/model stay queryable/redactable.
+  const stored = { ...llm };
+  if (stored.apiKey) stored.apiKey = encryptSecret(stored.apiKey);
   db.prepare(
-    `INSERT INTO settings (key, value) VALUES ('llm', ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
-  ).run(JSON.stringify(llm));
-  return llm;
+    `INSERT INTO settings (user_id, key, value) VALUES (?, 'llm', ?)
+     ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value`
+  ).run(userId, JSON.stringify(stored));
+  return llm; // decrypted, for server-side use
 }
 
-/** LLM settings safe to send to the client. */
-export function redactLlmSettings(settings = getSettings()) {
-  const { apiKey, ...rest } = settings.llm || {};
+/** LLM settings safe to send to the client. Pass the user's getSettings(). */
+export function redactLlmSettings(settings) {
+  const { apiKey, ...rest } = settings?.llm || {};
   const provider = rest.provider || "anthropic";
   const envKey = envKeyFor(provider);
   const hasKey = Boolean(apiKey || envKey);
@@ -72,25 +168,28 @@ function toEnvironment(row) {
     id: row.id,
     name: row.name,
     storeHash: row.store_hash,
-    accessToken: row.access_token,
+    accessToken: decryptSecret(row.access_token),
     createdAt: row.created_at,
   };
 }
 
-export function listEnvironments() {
-  return getDb()
-    .prepare("SELECT * FROM environments ORDER BY created_at")
-    .all()
+export function listEnvironments(userId) {
+  return secureDb()
+    .prepare("SELECT * FROM environments WHERE user_id = ? ORDER BY created_at")
+    .all(userId)
     .map(toEnvironment);
 }
 
-export function getEnvironment(envId) {
+/** Fetch an environment, scoped to its owner (null if not found or not owned). */
+export function getEnvironment(userId, envId) {
   return toEnvironment(
-    getDb().prepare("SELECT * FROM environments WHERE id = ?").get(envId)
+    secureDb()
+      .prepare("SELECT * FROM environments WHERE id = ? AND user_id = ?")
+      .get(envId, userId)
   );
 }
 
-export function createEnvironment({ name, storeHash, accessToken }) {
+export function createEnvironment(userId, { name, storeHash, accessToken }) {
   const env = {
     id: id(),
     name,
@@ -98,40 +197,41 @@ export function createEnvironment({ name, storeHash, accessToken }) {
     accessToken,
     createdAt: new Date().toISOString(),
   };
-  getDb()
+  secureDb()
     .prepare(
-      `INSERT INTO environments (id, name, store_hash, access_token, created_at)
-       VALUES (@id, @name, @storeHash, @accessToken, @createdAt)`
+      `INSERT INTO environments (id, user_id, name, store_hash, access_token, created_at)
+       VALUES (@id, @userId, @name, @storeHash, @accessToken, @createdAt)`
     )
-    .run(env);
-  return env;
+    .run({ ...env, userId, accessToken: encryptSecret(env.accessToken) });
+  return env; // plaintext token, for server-side use
 }
 
-export function updateEnvironment(envId, patch) {
-  const env = getEnvironment(envId);
+export function updateEnvironment(userId, envId, patch) {
+  const env = getEnvironment(userId, envId);
   if (!env) return null;
   for (const key of ["name", "storeHash", "accessToken"]) {
     if (patch[key] !== undefined && patch[key] !== "") env[key] = patch[key];
   }
-  getDb()
+  secureDb()
     .prepare(
       `UPDATE environments SET name = @name, store_hash = @storeHash,
-        access_token = @accessToken WHERE id = @id`
+        access_token = @accessToken WHERE id = @id AND user_id = @userId`
     )
-    .run(env);
-  return env;
+    .run({ ...env, userId, accessToken: encryptSecret(env.accessToken) });
+  return env; // plaintext token, for server-side use
 }
 
-export function deleteEnvironment(envId) {
+export function deleteEnvironment(userId, envId) {
   const db = getDb();
   const run = db.transaction(() => {
-    // analysis_products cascade from analyses; analyses have no FK ("demo").
+    // Only touch rows owned by this user. analysis_products cascade from
+    // analyses; analyses have no FK ("demo" is a pseudo-environment).
     db.prepare(
       `DELETE FROM analysis_products WHERE analysis_id IN
-         (SELECT id FROM analyses WHERE environment_id = ?)`
-    ).run(envId);
-    db.prepare("DELETE FROM analyses WHERE environment_id = ?").run(envId);
-    db.prepare("DELETE FROM environments WHERE id = ?").run(envId);
+         (SELECT id FROM analyses WHERE environment_id = ? AND user_id = ?)`
+    ).run(envId, userId);
+    db.prepare("DELETE FROM analyses WHERE environment_id = ? AND user_id = ?").run(envId, userId);
+    db.prepare("DELETE FROM environments WHERE id = ? AND user_id = ?").run(envId, userId);
   });
   run();
 }
@@ -177,55 +277,72 @@ export function analysisStatus(analysis) {
   return analysis.status || "done";
 }
 
-export function listAnalyses(environmentId) {
+export function listAnalyses(userId, environmentId) {
   const db = getDb();
   const rows = environmentId
     ? db
         .prepare(
           `SELECT ${ANALYSIS_COLS} FROM analyses a
-           WHERE a.environment_id = ? ORDER BY a.created_at DESC`
+           WHERE a.user_id = ? AND a.environment_id = ? ORDER BY a.created_at DESC`
         )
-        .all(environmentId)
+        .all(userId, environmentId)
     : db
-        .prepare(`SELECT ${ANALYSIS_COLS} FROM analyses a ORDER BY a.created_at DESC`)
-        .all();
+        .prepare(
+          `SELECT ${ANALYSIS_COLS} FROM analyses a
+           WHERE a.user_id = ? ORDER BY a.created_at DESC`
+        )
+        .all(userId);
   return rows.map((r) => toAnalysis(r));
 }
 
 /** Only successfully completed analyses — what dashboards should read. */
-export function listCompletedAnalyses(environmentId) {
-  return listAnalyses(environmentId).filter((a) => analysisStatus(a) === "done");
+export function listCompletedAnalyses(userId, environmentId) {
+  return listAnalyses(userId, environmentId).filter((a) => analysisStatus(a) === "done");
 }
 
-export function findRunningAnalysis(environmentId) {
+export function findRunningAnalysis(userId, environmentId) {
   const db = getDb();
   const row = environmentId
     ? db
         .prepare(
           `SELECT ${ANALYSIS_COLS} FROM analyses a
-           WHERE a.status = 'running' AND a.environment_id = ? LIMIT 1`
+           WHERE a.status = 'running' AND a.user_id = ? AND a.environment_id = ? LIMIT 1`
         )
-        .get(environmentId)
+        .get(userId, environmentId)
     : db
-        .prepare(`SELECT ${ANALYSIS_COLS} FROM analyses a WHERE a.status = 'running' LIMIT 1`)
-        .get();
+        .prepare(
+          `SELECT ${ANALYSIS_COLS} FROM analyses a
+           WHERE a.status = 'running' AND a.user_id = ? LIMIT 1`
+        )
+        .get(userId);
   return toAnalysis(row);
 }
 
-export function getAnalysis(analysisId) {
+/** All running analyses regardless of owner — for startup reconciliation. */
+export function listRunningAnalysesAllUsers() {
+  return getDb()
+    .prepare(`SELECT ${ANALYSIS_COLS} FROM analyses a WHERE a.status = 'running'`)
+    .all()
+    .map((r) => toAnalysis(r));
+}
+
+/** Fetch one analysis scoped to its owner (null if not found or not owned). */
+export function getAnalysis(userId, analysisId) {
   const row = getDb()
-    .prepare(`SELECT ${ANALYSIS_COLS}, a.catalog FROM analyses a WHERE a.id = ?`)
-    .get(analysisId);
+    .prepare(`SELECT ${ANALYSIS_COLS}, a.catalog FROM analyses a WHERE a.id = ? AND a.user_id = ?`)
+    .get(analysisId, userId);
   return toAnalysis(row, { withCatalog: true });
 }
 
-/** Per-product rows for one analysis (the app-shaped objects). */
-export function getAnalysisRows(analysisId) {
+/** Per-product rows for one analysis, scoped to its owner. */
+export function getAnalysisRows(userId, analysisId) {
   return getDb()
     .prepare(
-      `SELECT * FROM analysis_products WHERE analysis_id = ? ORDER BY impact DESC`
+      `SELECT p.* FROM analysis_products p
+       JOIN analyses a ON a.id = p.analysis_id
+       WHERE p.analysis_id = ? AND a.user_id = ? ORDER BY p.impact DESC`
     )
-    .all(analysisId)
+    .all(analysisId, userId)
     .map((r) => ({
       id: r.product_id,
       sku: r.sku,
@@ -242,7 +359,7 @@ export function getAnalysisRows(analysisId) {
     }));
 }
 
-export function createAnalysis({ environmentId, summary = null, status = "done", progress = null }) {
+export function createAnalysis({ userId, environmentId, summary = null, status = "done", progress = null }) {
   const analysis = {
     id: id(),
     environmentId,
@@ -256,11 +373,12 @@ export function createAnalysis({ environmentId, summary = null, status = "done",
   };
   getDb()
     .prepare(
-      `INSERT INTO analyses (id, environment_id, created_at, status, progress, summary)
-       VALUES (?, ?, ?, ?, ?, ?)`
+      `INSERT INTO analyses (id, user_id, environment_id, created_at, status, progress, summary)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       analysis.id,
+      userId,
       environmentId,
       analysis.createdAt,
       status,
@@ -316,7 +434,11 @@ export function updateAnalysis(analysisId, patch) {
     }
   });
   run();
-  return getAnalysis(analysisId);
+  // Internal (runner-owned) — return the record by id, not user-scoped.
+  const row = db
+    .prepare(`SELECT ${ANALYSIS_COLS}, a.catalog FROM analyses a WHERE a.id = ?`)
+    .get(analysisId);
+  return toAnalysis(row, { withCatalog: true });
 }
 
 /**

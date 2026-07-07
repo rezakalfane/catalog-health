@@ -110,11 +110,27 @@ Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
   `analysis_products` (per-product results, FK-cascaded), `settings`.
 - A leftover `data/db.json` from the previous JSON-file store is imported
   automatically on first run and renamed to `db.json.migrated`.
-- `data/` is **gitignored because it contains store API tokens and LLM API
-  keys in plain text**. Fine for a local skeleton; before any shared
-  deployment, move secrets to a secrets manager and encrypt at rest.
-- There is **no authentication** on the web app yet. Do not expose it beyond
-  localhost as-is.
+- **Secrets are encrypted at rest** (AES-256-GCM) when `APP_ENCRYPTION_KEY`
+  is set: store access tokens and LLM API keys are ciphertext in the DB, and
+  the key lives only in the environment (an untracked `apps/web/.env.local`
+  locally; a secrets manager in production) — never in `data/` or the repo.
+  Copy `apps/web/.env.example` to `.env.local` and generate a key with
+  `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`.
+  On first run with a key set, any existing plaintext secrets are migrated to
+  ciphertext and the freed pages are vacuumed. Without the key the app still
+  runs but stores secrets in plaintext (a warning path). **Losing the key**
+  means re-entering tokens under Environments / Settings.
+- `data/` is still **gitignored** — the DB holds encrypted secrets, but treat
+  it as sensitive. Before any shared deployment, add authentication to the
+  app and move the key to a managed secrets store (per company policy, start
+  with a GRC review).
+- **Authentication & multi-tenancy** (Auth.js): the app requires sign-in and
+  scopes environments, analyses, and settings per user — each account sees
+  only its own data. Google SSO (restricted to the company domain) is used
+  when `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` are set; in non-production a
+  **dev login** (sign in as any email) is available for local testing. The
+  first account to sign in adopts any pre-auth data. See the auth vars in
+  `apps/web/.env.example`.
 - Company policy: no PII into Claude when developing against real catalogs,
   and any deployment must start with a GRC review — no personal
   Vercel/Netlify accounts.
@@ -134,4 +150,5 @@ Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
 - [ ] Compare two analyses (what improved / regressed)
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)
-- [ ] Auth (SSO) before any shared deployment
+- [x] Auth (Google SSO + dev login) and per-user multi-tenancy
+      (production Google OAuth client + GRC review still needed before deploy)

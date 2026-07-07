@@ -1,12 +1,15 @@
 import "./globals.css";
 import Link from "next/link";
+import { auth } from "@/auth";
+import UserMenu from "@/components/UserMenu";
 
 export const metadata = {
   title: "Catalog Health",
   description: "BigCommerce catalog health & AI-readiness analyzer",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const session = await auth();
   return (
     <html lang="en">
       <head>
@@ -27,6 +30,9 @@ export default function RootLayout({ children }) {
             <Link href="/environments">Environments</Link>
             <Link href="/analyses/new">New analysis</Link>
             <Link href="/settings">Settings</Link>
+            <div style={{ marginTop: "auto" }}>
+              <UserMenu email={session?.user?.email} />
+            </div>
           </nav>
           <main className="main">{children}</main>
         </div>

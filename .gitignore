@@ -8,6 +8,7 @@ data/
 # Environment files
 .env
 .env.*
+!.env.example
 
 # CLI output
 health_report/

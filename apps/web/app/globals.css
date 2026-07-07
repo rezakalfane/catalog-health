@@ -63,6 +63,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  /* Stay in view while the main content scrolls, so the user menu at the
+     bottom is always reachable. */
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  overflow-y: auto;
 }
 .sidebar .brand {
   font-family: var(--font-display);
@@ -83,9 +90,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 .main { flex: 1; padding: 2rem 2.5rem; max-width: 1100px; }
 
+/* Signed-in user menu (sidebar footer) */
+.user-menu { border-top: 1px solid rgba(255, 255, 255, 0.12); padding-top: 0.75rem; display: flex; flex-direction: column; gap: 0.4rem; }
+.user-menu-email { font-size: 0.78rem; color: #b9c2dd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu-signout { background: transparent; color: #b9c2dd; border: 1px solid rgba(255,255,255,0.18); padding: 0.35rem 0.5rem; font-size: 0.82rem; text-align: left; }
+.user-menu-signout:hover { background: rgba(255,255,255,0.08); color: #fff; filter: none; }
+
 @media (max-width: 720px) {
   .shell { flex-direction: column; }
-  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 0.75rem 1rem; }
+  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 0.75rem 1rem; position: static; height: auto; overflow: visible; }
   .sidebar .brand { margin: 0 1rem 0 0; }
   .main { padding: 1.25rem; }
 }

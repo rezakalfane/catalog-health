@@ -318,3 +318,43 @@ direction, reverse on re-click), replacing the Sort-by dropdown.
 
 Attributes/thumbnails are captured at analysis time, so they populate for
 new analyses; older ones show placeholders / a "predates capture" note.
+
+## 19. Encrypt secrets at rest — 2026-07-07
+
+> **Prompts:** How can we add SSO / protect the token in the db? → Let's add
+> the APP_ENCRYPTION_KEY feature first, generate one and store it in a .env
+> local file for local run. (Followed by: I've deleted data/db.json.migrated.)
+
+**Summary:** Store access tokens and LLM API keys are encrypted at rest with
+AES-256-GCM (`lib/crypto.js`), keyed by `APP_ENCRYPTION_KEY` (in the
+untracked `apps/web/.env.local`; `.env.example` is the committed template).
+`lib/db.js` `secureDb()` sweeps legacy plaintext → ciphertext on first access
+and VACUUMs the freed pages. Stored form `enc:v1:` + base64(iv|tag|ciphertext).
+Without the key the app still runs but stores plaintext. The pre-SQLite
+`data/db.json.migrated` plaintext backup was deleted.
+
+## 20. Auth (Google SSO + dev login) & per-user multi-tenancy — 2026-07-07
+
+> **Prompts:** [SSO design discussion — Google, localhost, env vars, creating
+> the OAuth client] → build auth + multi-tenancy against a dev login now,
+> Google-ready. → can the left menu be sticky?
+
+**Summary:** Added Auth.js (NextAuth v5). Providers: **Google SSO** (active
+when `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` are set; restricted to the company
+domain via `AUTH_ALLOWED_DOMAIN`, default commerce.com) and a **dev-login**
+Credentials provider (non-production only) to work before the Google OAuth
+client exists. Edge-safe `auth.config.js` powers `middleware.js` (gates
+pages; API routes enforce auth in-handler → 401); the DB-backed jwt callback
+lives in `auth.js`. A `/signin` page and a sidebar user menu (now sticky/
+full-height) round out the UX.
+
+Multi-tenancy: schema migration v3 adds a `users` table and per-user
+ownership (`user_id` on environments/analyses; per-user `settings`). Every
+`db.js` function is scoped by user id, threaded through all API routes,
+server pages, and the background runner. The first account to sign in claims
+all pre-auth data; subsequent users start isolated. Verified against a copy
+of the real DB (6 environments / 28 analyses / settings claimed; a second
+user sees nothing).
+
+Still needed before deploy: a production Google OAuth client (localhost is
+dev-only) and a GRC review.

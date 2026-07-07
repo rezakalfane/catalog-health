@@ -19,7 +19,7 @@ import {
 import {
   createAnalysis,
   updateAnalysis,
-  listAnalyses,
+  listRunningAnalysesAllUsers,
   getSettings,
 } from "@/lib/db";
 
@@ -42,8 +42,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Mark "running" analyses with no live runner in this process as failed. */
 export function reconcileInterruptedAnalyses() {
-  for (const a of listAnalyses()) {
-    if (a.status === "running" && !activeRuns.has(a.id)) {
+  for (const a of listRunningAnalysesAllUsers()) {
+    if (!activeRuns.has(a.id)) {
       updateAnalysis(a.id, {
         status: "failed",
         error: "Interrupted — the server restarted while this analysis was running.",
@@ -57,15 +57,16 @@ export function reconcileInterruptedAnalyses() {
  * Create the analysis record and kick off the run in the background.
  * Returns immediately with the (running) record.
  */
-export function startAnalysisRun({ environment, demo, semantic }) {
+export function startAnalysisRun({ userId, environment, demo, semantic }) {
   const analysis = createAnalysis({
+    userId,
     environmentId: environment ? environment.id : "demo",
     status: "running",
     summary: null,
     progress: { percent: 0, stage: "fetch", label: "Starting…", detail: null },
   });
   activeRuns.add(analysis.id);
-  execute(analysis.id, { environment, demo, semantic })
+  execute(analysis.id, { userId, environment, demo, semantic })
     .catch((err) => {
       updateAnalysis(analysis.id, {
         status: "failed",
@@ -80,7 +81,7 @@ export function startAnalysisRun({ environment, demo, semantic }) {
   return analysis;
 }
 
-async function execute(analysisId, { environment, demo, semantic }) {
+async function execute(analysisId, { userId, environment, demo, semantic }) {
   const setProgress = (percent, stage, label, detail = null, extra = {}) =>
     updateAnalysis(analysisId, {
       progress: { percent: Math.min(99, Math.round(percent)), stage, label, detail },
@@ -132,7 +133,7 @@ async function execute(analysisId, { environment, demo, semantic }) {
   // -- Stage 2b (optional): semantic pass (~64 -> ~78) -------------------------
   if (semantic) {
     try {
-      const judge = createJudge(demo ? { provider: "demo" } : getSettings().llm);
+      const judge = createJudge(demo ? { provider: "demo" } : getSettings(userId).llm);
       setProgress(64, "semantic", "Judging descriptions…", judge.label);
       const verdicts = await judgeCatalog(products, {
         judgeChunk: judge.judgeChunk,
