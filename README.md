@@ -53,7 +53,9 @@ npm run dev
   hash, access token). Tokens are write-only in the UI: the API never sends
   them back to the browser.
 - **New analysis** — pick an environment and run; or run a demo analysis with
-  no credentials to see the dashboards populated.
+  no credentials to see the dashboards populated. Analyses run asynchronously:
+  you land on a live analysis page (progress bar + sections filling in as the
+  run advances) and can navigate away and come back at any time.
 - **Dashboard / environment pages** — latest grade, score sparkline over
   time, dimension breakdown, most common issues, weakest categories, and the
   impact-weighted top-fix list.
@@ -92,7 +94,9 @@ Weights and thresholds live in `packages/core/src/scoring.js`.
 
 - [ ] Semantic scoring pass (LLM judges whether descriptions answer
       "what is it, who's it for, what's it made of")
-- [ ] Async analysis jobs with progress (large catalogs block the request today)
+- [x] Async analysis jobs with progress
+      (in-process runner — jobs don't survive a server restart; they're marked
+      failed. A real queue is only needed if this outgrows one process)
 - [ ] Per-product drill-down page and full product table with filters
 - [ ] CSV / PDF export from the web app
 - [ ] Compare two analyses (what improved / regressed)

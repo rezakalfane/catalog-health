@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function NewAnalysisPage() {
+function NewAnalysisForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedEnv = searchParams.get("env");
   const [environments, setEnvironments] = useState([]);
   const [selected, setSelected] = useState("");
   const [running, setRunning] = useState(false);
@@ -15,9 +17,11 @@ export default function NewAnalysisPage() {
       .then((r) => r.json())
       .then((envs) => {
         setEnvironments(envs);
-        if (envs.length) setSelected(envs[0].id);
+        if (!envs.length) return;
+        const preselected = envs.find((env) => env.id === preselectedEnv);
+        setSelected(preselected ? preselected.id : envs[0].id);
       });
-  }, []);
+  }, [preselectedEnv]);
 
   async function run(demo = false) {
     setRunning(true);
@@ -27,18 +31,18 @@ export default function NewAnalysisPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(demo ? { demo: true } : { environmentId: selected }),
     });
-    setRunning(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error || "Analysis failed");
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 409 && body.analysisId) {
+      // Already running — take the user to the run in progress.
+      router.push(`/analyses/${body.analysisId}`);
       return;
     }
-    const analysis = await res.json();
-    router.push(
-      analysis.environmentId === "demo"
-        ? "/"
-        : `/environments/${analysis.environmentId}`
-    );
+    if (!res.ok) {
+      setRunning(false);
+      setError(body.error || "Could not start the analysis");
+      return;
+    }
+    router.push(`/analyses/${body.id}`);
   }
 
   return (
@@ -52,7 +56,8 @@ export default function NewAnalysisPage() {
         <p className="muted">
           Pulls the full catalog (read-only), scores every product across five
           health dimensions, and saves the report to this environment&apos;s history.
-          Large catalogs can take a few minutes.
+          The analysis runs in the background — you can navigate away and come
+          back to it at any time.
         </p>
         {environments.length === 0 ? (
           <p className="muted">
@@ -74,7 +79,7 @@ export default function NewAnalysisPage() {
               ))}
             </select>
             <button onClick={() => run(false)} disabled={running || !selected}>
-              {running ? "Analyzing…" : "Run analysis"}
+              {running ? "Starting…" : "Run analysis"}
             </button>
           </>
         )}
@@ -88,9 +93,18 @@ export default function NewAnalysisPage() {
           needed. Useful for demos and for checking the tool works.
         </p>
         <button className="secondary" onClick={() => run(true)} disabled={running}>
-          {running ? "Analyzing…" : "Run demo analysis"}
+          {running ? "Starting…" : "Run demo analysis"}
         </button>
       </div>
     </>
+  );
+}
+
+export default function NewAnalysisPage() {
+  // useSearchParams requires a Suspense boundary at build time
+  return (
+    <Suspense>
+      <NewAnalysisForm />
+    </Suspense>
   );
 }
