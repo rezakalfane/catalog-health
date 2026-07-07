@@ -7,6 +7,26 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/auth-multitenancy — 2026-07-07
+
+Two security/accounts features developed in one arc (entangled in db.js /
+sqlite.js, so committed together). Merged into `main` (no-ff), branch
+deleted after merge; hashes backfilled next entry. HISTORY.md entries 19–20.
+(The `feat/token-encryption` branch had no commits of its own — the
+encryption work rode into this branch and is included here.)
+
+Highlights:
+
+- **Secrets encrypted at rest** (AES-256-GCM, `lib/crypto.js`) keyed by
+  `APP_ENCRYPTION_KEY`; `secureDb()` migrates legacy plaintext on first
+  access and vacuums. Key lives in untracked `.env.local`.
+- **Auth.js (NextAuth v5)**: Google SSO (company-domain restricted) +
+  dev-login provider (non-prod); `middleware.js` gates pages, API routes
+  return 401; `/signin` page + sidebar user menu (sticky).
+- **Per-user multi-tenancy**: schema v3 (`users` + `user_id` ownership,
+  per-user settings); all db.js functions scoped by user and threaded
+  through routes/pages/runner; first sign-in claims pre-auth data.
+
 ## feat/product-details — 2026-07-07
 
 Product-detail attributes, control-panel deep link, thumbnails, and

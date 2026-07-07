@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { listEnvironments, listCompletedAnalyses, redactEnvironment } from "@/lib/db";
+import { requireUser } from "@/lib/auth-helpers";
 import GradeLozenge from "@/components/GradeLozenge";
 import Sparkline from "@/components/Sparkline";
 
 export const dynamic = "force-dynamic";
 
-export default function Dashboard() {
-  const environments = listEnvironments().map(redactEnvironment);
-  const analyses = listCompletedAnalyses();
+export default async function Dashboard() {
+  const user = await requireUser();
+  const environments = listEnvironments(user.id).map(redactEnvironment);
+  const analyses = listCompletedAnalyses(user.id);
 
   const latestByEnv = new Map();
   const historyByEnv = new Map();

@@ -7,6 +7,7 @@ import {
   redactEnvironment,
 } from "@/lib/db";
 import { reconcileInterruptedAnalyses } from "@/lib/analysis-runner";
+import { requireUser } from "@/lib/auth-helpers";
 import GradeLozenge from "@/components/GradeLozenge";
 import DimensionBars from "@/components/DimensionBars";
 import Sparkline from "@/components/Sparkline";
@@ -19,13 +20,14 @@ import { sectionInfo } from "@/components/section-info";
 export const dynamic = "force-dynamic";
 
 export default async function EnvironmentDetail({ params }) {
+  const user = await requireUser();
   const { id } = await params;
-  const env = redactEnvironment(getEnvironment(id));
+  const env = redactEnvironment(getEnvironment(user.id, id));
   if (!env) notFound();
 
   reconcileInterruptedAnalyses();
-  const runningAnalysis = findRunningAnalysis(id);
-  const analyses = listCompletedAnalyses(id); // newest first
+  const runningAnalysis = findRunningAnalysis(user.id, id);
+  const analyses = listCompletedAnalyses(user.id, id); // newest first
   const latest = analyses[0];
   const history = [...analyses]
     .reverse()

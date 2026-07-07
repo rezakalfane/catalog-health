@@ -73,6 +73,34 @@ const MIGRATIONS = [
   `
   ALTER TABLE analysis_products ADD COLUMN details TEXT; -- JSON
   `,
+
+  // 3 — accounts + per-user ownership. environments/analyses get a nullable
+  // user_id (NULL = orphaned pre-auth data, claimed by the first account to
+  // sign in). settings becomes per-user: PK (user_id, key); pre-auth rows are
+  // parked under user_id '' and likewise claimed.
+  `
+  CREATE TABLE users (
+    id         TEXT PRIMARY KEY,
+    email      TEXT NOT NULL UNIQUE,
+    name       TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  ALTER TABLE environments ADD COLUMN user_id TEXT REFERENCES users(id);
+  ALTER TABLE analyses ADD COLUMN user_id TEXT REFERENCES users(id);
+  CREATE INDEX idx_environments_user ON environments (user_id);
+  CREATE INDEX idx_analyses_user ON analyses (user_id, created_at DESC);
+
+  CREATE TABLE settings_new (
+    user_id TEXT NOT NULL DEFAULT '',
+    key     TEXT NOT NULL,
+    value   TEXT NOT NULL,
+    PRIMARY KEY (user_id, key)
+  );
+  INSERT INTO settings_new (user_id, key, value) SELECT '', key, value FROM settings;
+  DROP TABLE settings;
+  ALTER TABLE settings_new RENAME TO settings;
+  `,
 ];
 
 function migrate(db) {

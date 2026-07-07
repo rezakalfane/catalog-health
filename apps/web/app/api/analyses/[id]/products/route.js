@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { getAnalysis, getAnalysisRows } from "@/lib/db";
+import { getApiUser } from "@/lib/auth-helpers";
 
 /**
  * Full per-product results for one analysis, plus a category id -> name map
  * (derived from the summary rollup). Filtering/sorting happens client-side.
  */
 export async function GET(request, { params }) {
+  const user = await getApiUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
-  const analysis = getAnalysis(id);
+  const analysis = getAnalysis(user.id, id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!analysis.hasRows) {
     return NextResponse.json(
@@ -43,6 +46,6 @@ export async function GET(request, { params }) {
     treeNames,
     treeChannels,
     channelNames,
-    rows: getAnalysisRows(id),
+    rows: getAnalysisRows(user.id, id),
   });
 }
