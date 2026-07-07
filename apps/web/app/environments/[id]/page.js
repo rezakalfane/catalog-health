@@ -28,7 +28,13 @@ export default async function EnvironmentDetail({ params }) {
   const latest = analyses[0];
   const history = [...analyses]
     .reverse()
-    .map((a) => ({ createdAt: a.createdAt, overall: a.summary.overall }));
+    .map((a) => ({
+      id: a.id,
+      createdAt: a.createdAt,
+      overall: a.summary.overall,
+      grade: a.summary.grade,
+      productCount: a.summary.productCount,
+    }));
 
   return (
     <>

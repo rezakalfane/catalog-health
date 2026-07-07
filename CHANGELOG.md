@@ -7,11 +7,17 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/score-history-hover — 2026-07-07
+
+Interactive score-history sparkline: hover a point for date, product count,
+score, and grade; click through to that analysis. Keyboard-accessible hit
+targets. Merged into `main` (no-ff), branch deleted after merge. HISTORY.md
+entry 17.
+
 ## feat/sqlite-store — 2026-07-07
 
-SQLite replaces the JSON-file store. Merged into `main` (no-ff), branch
-deleted after merge; hashes backfilled in the next entry. HISTORY.md
-entry 16.
+SQLite replaces the JSON-file store. Commit `48857bf`, merged into `main`
+as `ba3f27a` (no-ff), branch deleted after merge. HISTORY.md entry 16.
 
 Highlights:
 
