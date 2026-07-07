@@ -173,6 +173,19 @@ button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem
 .dim-row .dim-fill { display: block; height: 100%; background: var(--signal); border-radius: 4px; transition: width 0.4s ease; }
 .dim-row .dim-val { width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.83rem; }
 
+/* Semantic verdict badges -------------------------------------------------------- */
+.verdict {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.verdict.yes { background: #e2f4ea; color: var(--grade-a); }
+.verdict.partial { background: #fbf0d8; color: var(--grade-c); }
+.verdict.no { background: #fbe3e7; color: var(--grade-f); }
+
 /* Product thumbnails in tables --------------------------------------------------- */
 .prod-thumb {
   border-radius: 6px;

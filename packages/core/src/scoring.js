@@ -194,23 +194,45 @@ function scoreFeed(p, issues) {
  */
 export function applySemanticVerdicts(rows, verdictsById) {
   const pts = { yes: 1, partial: 0.5, no: 0 };
+  const NO_DESCRIPTION = "Not evaluated — no description was available to judge.";
+  const NO_RESULT =
+    "The judge did not return a result for this product — the batch may have failed or the model's response was incomplete. Try re-running the analysis.";
   return rows.map((row) => {
     const v = verdictsById.get(row.id);
     const issues = [...row.issues];
     let semantic = 0;
+    let semanticDetail;
     if (v) {
       semantic = Math.round(
-        100 * (0.5 * pts[v.what_it_is] + 0.25 * pts[v.who_its_for] + 0.25 * pts[v.made_of])
+        100 *
+          (0.5 * pts[v.what_it_is.verdict] +
+            0.25 * pts[v.who_its_for.verdict] +
+            0.25 * pts[v.made_of.verdict])
       );
-      if (pts[v.what_it_is] < 1) issues.push("desc_unclear_what_it_is");
-      if (pts[v.who_its_for] < 1) issues.push("desc_no_target_audience");
-      if (pts[v.made_of] < 1) issues.push("desc_no_materials_or_specs");
+      if (pts[v.what_it_is.verdict] < 1) issues.push("desc_unclear_what_it_is");
+      if (pts[v.who_its_for.verdict] < 1) issues.push("desc_no_target_audience");
+      if (pts[v.made_of.verdict] < 1) issues.push("desc_no_materials_or_specs");
+      semanticDetail = {
+        what_it_is: v.what_it_is,
+        who_its_for: v.who_its_for,
+        made_of: v.made_of,
+      };
     } else {
       issues.push(
         "desc_unclear_what_it_is",
         "desc_no_target_audience",
         "desc_no_materials_or_specs"
       );
+      // Distinguish "genuinely had no description" from "was submitted to the
+      // judge but no usable verdict came back" — the messages are different.
+      const hadDescription = (row.details?.descriptionChars || 0) >= 20;
+      const reason = hadDescription ? NO_RESULT : NO_DESCRIPTION;
+      semanticDetail = {
+        what_it_is: { verdict: "no", reason },
+        who_its_for: { verdict: "no", reason },
+        made_of: { verdict: "no", reason },
+        unevaluated: true,
+      };
     }
     const scores = { ...row.scores, semantic };
     const overall = Math.round(
@@ -221,7 +243,7 @@ export function applySemanticVerdicts(rows, verdictsById) {
     );
     const impact =
       Math.round((100 - overall) * Math.log1p(row.viewCount + 5 * row.totalSold) * 10) / 10;
-    return { ...row, scores, overall, grade: grade(overall), impact, issues };
+    return { ...row, scores, overall, grade: grade(overall), impact, issues, semantic: semanticDetail };
   });
 }
 

@@ -101,6 +101,12 @@ const MIGRATIONS = [
   DROP TABLE settings;
   ALTER TABLE settings_new RENAME TO settings;
   `,
+
+  // 4 — per-criterion semantic verdicts + reasons (the LLM judge output),
+  // shown in the Semantic section of the product drill-down.
+  `
+  ALTER TABLE analysis_products ADD COLUMN semantic TEXT; -- JSON
+  `,
 ];
 
 function migrate(db) {
