@@ -160,6 +160,26 @@ button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem
 .dim-row .dim-fill { display: block; height: 100%; background: var(--signal); border-radius: 4px; transition: width 0.4s ease; }
 .dim-row .dim-val { width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.83rem; }
 
+/* Product thumbnails in tables --------------------------------------------------- */
+.prod-thumb {
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: #fff;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+.prod-thumb--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper);
+  color: var(--ink-soft);
+  opacity: 0.55;
+}
+.prod-cell { display: flex; align-items: center; gap: 0.55rem; }
+
 /* Sparkline tooltip ------------------------------------------------------------ */
 .sparkline { position: relative; display: inline-block; }
 .spark-tip {
@@ -182,6 +202,11 @@ button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem
 .spark-grade.C { color: #f2c14e; }
 .spark-grade.D { color: #f29b5e; }
 .spark-grade.F { color: #f58aa0; }
+
+/* Sortable table headers -------------------------------------------------------- */
+th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+th.sortable:hover { color: var(--signal); }
+th.sortable .sort-arrow { display: inline-block; width: 1em; font-size: 0.7em; margin-left: 0.15rem; }
 
 /* Product table filters -------------------------------------------------------- */
 .filters {

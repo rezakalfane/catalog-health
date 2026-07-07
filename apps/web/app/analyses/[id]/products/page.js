@@ -4,18 +4,23 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import GradeLozenge from "@/components/GradeLozenge";
+import ProductThumb from "@/components/ProductThumb";
 import { issueLabel } from "@/components/issue-info";
 
 const PAGE_SIZE = 50;
 const GRADES = ["A", "B", "C", "D", "F"];
-const SORTS = {
-  impact: { label: "Impact (highest first)", fn: (a, b) => b.impact - a.impact },
-  worst: { label: "Score (worst first)", fn: (a, b) => a.overall - b.overall },
-  best: { label: "Score (best first)", fn: (a, b) => b.overall - a.overall },
-  views: { label: "Views (highest first)", fn: (a, b) => b.viewCount - a.viewCount },
-  sold: { label: "Units sold (highest first)", fn: (a, b) => b.totalSold - a.totalSold },
-  name: { label: "Name (A→Z)", fn: (a, b) => a.name.localeCompare(b.name) },
-};
+
+// Sortable columns: `dir` is the direction applied on first click.
+const COLUMNS = [
+  { key: "name", label: "Product", cmp: (a, b) => a.name.localeCompare(b.name), dir: "asc" },
+  { key: "sku", label: "SKU", cmp: (a, b) => a.sku.localeCompare(b.sku), dir: "asc" },
+  { key: "overall", label: "Score", cmp: (a, b) => a.overall - b.overall, dir: "asc" },
+  { key: "grade", label: "Grade", cmp: (a, b) => a.overall - b.overall, dir: "asc" },
+  { key: "impact", label: "Impact", cmp: (a, b) => a.impact - b.impact, dir: "desc" },
+  { key: "viewCount", label: "Views", cmp: (a, b) => a.viewCount - b.viewCount, dir: "desc" },
+  { key: "totalSold", label: "Sold", cmp: (a, b) => a.totalSold - b.totalSold, dir: "desc" },
+  { key: "issues", label: "Issues", cmp: (a, b) => a.issues.length - b.issues.length, dir: "desc" },
+];
 
 export default function ProductTablePage() {
   const { id } = useParams();
@@ -27,8 +32,19 @@ export default function ProductTablePage() {
   const [grade, setGrade] = useState("");
   const [issue, setIssue] = useState("");
   const [category, setCategory] = useState("");
-  const [sort, setSort] = useState("impact");
+  const [sortCol, setSortCol] = useState("impact");
+  const [sortDir, setSortDir] = useState("desc");
   const [page, setPage] = useState(0);
+
+  function sortBy(key) {
+    if (key === sortCol) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortCol(key);
+      setSortDir(COLUMNS.find((c) => c.key === key).dir);
+    }
+    setPage(0);
+  }
 
   useEffect(() => {
     fetch(`/api/analyses/${id}/products`)
@@ -60,6 +76,8 @@ export default function ProductTablePage() {
   const filtered = useMemo(() => {
     if (!data) return [];
     const q = search.trim().toLowerCase();
+    const col = COLUMNS.find((c) => c.key === sortCol);
+    const sign = sortDir === "asc" ? 1 : -1;
     return data.rows
       .filter((r) => {
         if (q && !r.name.toLowerCase().includes(q) && !r.sku.toLowerCase().includes(q)) return false;
@@ -68,8 +86,8 @@ export default function ProductTablePage() {
         if (category && !r.categories.map(String).includes(category)) return false;
         return true;
       })
-      .sort(SORTS[sort].fn);
-  }, [data, search, grade, issue, category, sort]);
+      .sort((a, b) => sign * col.cmp(a, b));
+  }, [data, search, grade, issue, category, sortCol, sortDir]);
 
   // Clamp the page when filters shrink the result set.
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -171,16 +189,6 @@ export default function ProductTablePage() {
               ))}
             </select>
           </div>
-          <div>
-            <label htmlFor="f-sort">Sort by</label>
-            <select id="f-sort" value={sort} onChange={(e) => updateFilter(setSort)(e.target.value)}>
-              {Object.entries(SORTS).map(([key, s]) => (
-                <option key={key} value={key}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
         <p className="muted">
@@ -202,21 +210,35 @@ export default function ProductTablePage() {
         <table>
           <thead>
             <tr>
-              <th>Product</th>
-              <th>SKU</th>
-              <th>Score</th>
-              <th>Grade</th>
-              <th>Impact</th>
-              <th>Views</th>
-              <th>Sold</th>
-              <th>Issues</th>
+              {COLUMNS.map((c) => (
+                <th
+                  key={c.key}
+                  className="sortable"
+                  onClick={() => sortBy(c.key)}
+                  aria-sort={
+                    sortCol === c.key
+                      ? sortDir === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : undefined
+                  }
+                >
+                  {c.label}
+                  <span className="sort-arrow">
+                    {sortCol === c.key ? (sortDir === "asc" ? "▲" : "▼") : ""}
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {pageRows.map((r) => (
               <tr key={r.id}>
                 <td>
-                  <Link href={`/analyses/${id}/products/${r.id}`}>{r.name || `#${r.id}`}</Link>
+                  <span className="prod-cell">
+                    <ProductThumb src={r.details?.thumbnailUrl} alt="" />
+                    <Link href={`/analyses/${id}/products/${r.id}`}>{r.name || `#${r.id}`}</Link>
+                  </span>
                 </td>
                 <td className="muted">{r.sku}</td>
                 <td>{r.overall}</td>
