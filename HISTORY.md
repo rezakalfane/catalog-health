@@ -106,3 +106,14 @@ is a `<span>` (inline by default), and `width`/`height` don't apply to inline
 elements. The gray track only showed because being a flex item blockifies it.
 Fixed with `display: block` on `.dim-fill` in `globals.css`, plus a width
 transition so the bars animate when a running analysis fills them in.
+
+## 6. Add CHANGELOG.md — 2026-07-07
+
+> **Prompt:** Would be worth adding a CHANGELOG.md file with history of
+> branches, commits and merges.
+
+**Summary:** Created CHANGELOG.md at the repo root: one entry per merged
+branch (newest first) listing its commits, the merge commit into `main`, and
+highlights — starting with the initial commit and `feat/async-analysis-ux`.
+Complements HISTORY.md: CHANGELOG.md tracks the git-level history, HISTORY.md
+the prompt-by-prompt evolution; each references the other.
