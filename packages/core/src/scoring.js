@@ -11,6 +11,12 @@ export const DIMENSION_WEIGHTS = {
   feed: 0.15,
 };
 
+/**
+ * When the semantic pass runs, it takes this share of the overall score and
+ * the five heuristic dimensions scale down proportionally to make room.
+ */
+export const SEMANTIC_WEIGHT = 0.15;
+
 export const THRESHOLDS = {
   minDescriptionChars: 200,
   goodDescriptionChars: 500,
@@ -169,6 +175,45 @@ function scoreFeed(p, issues) {
     else issues.push(flag);
   }
   return Math.round((100 * passed) / Object.keys(checks).length);
+}
+
+/**
+ * Merge semantic verdicts (from the LLM judge) into analyzed rows: adds a
+ * `semantic` dimension, re-weights the overall score, and appends semantic
+ * issues. Rows without a verdict (no description, or a failed chunk with a
+ * missing description signal) score 0 on the dimension.
+ */
+export function applySemanticVerdicts(rows, verdictsById) {
+  const pts = { yes: 1, partial: 0.5, no: 0 };
+  return rows.map((row) => {
+    const v = verdictsById.get(row.id);
+    const issues = [...row.issues];
+    let semantic = 0;
+    if (v) {
+      semantic = Math.round(
+        100 * (0.5 * pts[v.what_it_is] + 0.25 * pts[v.who_its_for] + 0.25 * pts[v.made_of])
+      );
+      if (pts[v.what_it_is] < 1) issues.push("desc_unclear_what_it_is");
+      if (pts[v.who_its_for] < 1) issues.push("desc_no_target_audience");
+      if (pts[v.made_of] < 1) issues.push("desc_no_materials_or_specs");
+    } else {
+      issues.push(
+        "desc_unclear_what_it_is",
+        "desc_no_target_audience",
+        "desc_no_materials_or_specs"
+      );
+    }
+    const scores = { ...row.scores, semantic };
+    const overall = Math.round(
+      Object.entries(DIMENSION_WEIGHTS).reduce(
+        (acc, [d, w]) => acc + scores[d] * w * (1 - SEMANTIC_WEIGHT),
+        0
+      ) + semantic * SEMANTIC_WEIGHT
+    );
+    const impact =
+      Math.round((100 - overall) * Math.log1p(row.viewCount + 5 * row.totalSold) * 10) / 10;
+    return { ...row, scores, overall, grade: grade(overall), impact, issues };
+  });
 }
 
 /**

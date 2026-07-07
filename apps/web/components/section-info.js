@@ -53,6 +53,12 @@ export const sectionInfo = {
           <strong>Feed (15%)</strong> — minimum field set for Google Shopping
           and AI-agent feeds.
         </li>
+        <li>
+          <strong>Semantic</strong> — <em>when enabled in Settings</em>, an LLM
+          judges whether each description answers: what is it, who&apos;s it
+          for, what&apos;s it made of. It takes 15% of the overall score and
+          the other dimensions scale down proportionally.
+        </li>
       </ul>
     </>
   ),

@@ -46,6 +46,10 @@ export async function POST(request) {
     );
   }
 
-  const analysis = startAnalysisRun({ environment, demo: Boolean(body?.demo) });
+  const analysis = startAnalysisRun({
+    environment,
+    demo: Boolean(body?.demo),
+    semantic: Boolean(body?.semantic),
+  });
   return NextResponse.json(analysis, { status: 202 });
 }

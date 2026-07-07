@@ -45,10 +45,12 @@ export function summarize(rows, categories) {
   const overall = mean(rows.map((r) => r.overall));
   const gradeDist = { A: 0, B: 0, C: 0, D: 0, F: 0 };
   for (const r of rows) gradeDist[r.grade] += 1;
+  // Derive dimensions from the rows so the optional semantic pass shows up.
+  const dimensions = Object.keys(rows[0]?.scores || DIMENSION_WEIGHTS);
   const dimensionAverages = Object.fromEntries(
-    Object.keys(DIMENSION_WEIGHTS).map((d) => [
+    dimensions.map((d) => [
       d,
-      Math.round(mean(rows.map((r) => r.scores[d])) * 10) / 10,
+      Math.round(mean(rows.map((r) => r.scores[d] ?? 0)) * 10) / 10,
     ])
   );
   return {

@@ -84,7 +84,11 @@ export default function Dashboard() {
                 const env = environments.find((e) => e.id === a.environmentId);
                 return (
                   <tr key={a.id}>
-                    <td>{new Date(a.createdAt).toLocaleString()}</td>
+                    <td>
+                      <Link href={`/analyses/${a.id}`}>
+                        {new Date(a.createdAt).toLocaleString()}
+                      </Link>
+                    </td>
                     <td>
                       {env ? (
                         <Link href={`/environments/${env.id}`}>{env.name}</Link>
