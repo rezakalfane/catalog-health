@@ -1,9 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getEnvironment, listAnalyses, redactEnvironment } from "@/lib/db";
+import { getEnvironment, listCompletedAnalyses, redactEnvironment } from "@/lib/db";
 import GradeLozenge from "@/components/GradeLozenge";
 import DimensionBars from "@/components/DimensionBars";
 import Sparkline from "@/components/Sparkline";
+import RunAnalysisAction from "@/components/RunAnalysisAction";
+import InfoPopover from "@/components/InfoPopover";
+import { sectionInfo } from "@/components/section-info";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +14,7 @@ export default async function EnvironmentDetail({ params }) {
   const env = redactEnvironment(getEnvironment(id));
   if (!env) notFound();
 
-  const analyses = listAnalyses(id); // newest first
+  const analyses = listCompletedAnalyses(id); // newest first
   const latest = analyses[0];
   const history = [...analyses]
     .reverse()
@@ -25,9 +27,7 @@ export default async function EnvironmentDetail({ params }) {
           <h1>{env.name}</h1>
           <p className="muted">Store hash: {env.storeHash}</p>
         </div>
-        <Link className="btn" href="/analyses/new">
-          Run new analysis
-        </Link>
+        <RunAnalysisAction environmentId={env.id} />
       </div>
 
       {!latest ? (
@@ -41,7 +41,10 @@ export default async function EnvironmentDetail({ params }) {
         <>
           <div className="grid">
             <div className="card">
-              <h2>Latest health</h2>
+              <h2>
+                Latest health
+                <InfoPopover title="Latest health">{sectionInfo.latestHealth}</InfoPopover>
+              </h2>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                 <GradeLozenge grade={latest.summary.grade} />
                 <div>
@@ -56,18 +59,27 @@ export default async function EnvironmentDetail({ params }) {
               </div>
             </div>
             <div className="card">
-              <h2>Score history</h2>
+              <h2>
+                Score history
+                <InfoPopover title="Score history">{sectionInfo.scoreHistory}</InfoPopover>
+              </h2>
               <Sparkline points={history} width={280} height={64} />
               <p className="muted">{analyses.length} analysis run{analyses.length === 1 ? "" : "s"}</p>
             </div>
             <div className="card">
-              <h2>Dimensions</h2>
+              <h2>
+                Dimensions
+                <InfoPopover title="Dimensions">{sectionInfo.dimensions}</InfoPopover>
+              </h2>
               <DimensionBars averages={latest.summary.dimensionAverages} />
             </div>
           </div>
 
           <div className="card">
-            <h2>Most common issues</h2>
+            <h2>
+              Most common issues
+              <InfoPopover title="Most common issues">{sectionInfo.commonIssues}</InfoPopover>
+            </h2>
             <table>
               <thead>
                 <tr>
@@ -87,7 +99,10 @@ export default async function EnvironmentDetail({ params }) {
           </div>
 
           <div className="card">
-            <h2>Weakest categories</h2>
+            <h2>
+              Weakest categories
+              <InfoPopover title="Weakest categories">{sectionInfo.weakestCategories}</InfoPopover>
+            </h2>
             <table>
               <thead>
                 <tr>
@@ -115,7 +130,10 @@ export default async function EnvironmentDetail({ params }) {
           </div>
 
           <div className="card">
-            <h2>Top fixes (traffic &amp; sales weighted)</h2>
+            <h2>
+              Top fixes (traffic &amp; sales weighted)
+              <InfoPopover title="Top fixes">{sectionInfo.topFixes}</InfoPopover>
+            </h2>
             <table>
               <thead>
                 <tr>
@@ -145,7 +163,10 @@ export default async function EnvironmentDetail({ params }) {
           </div>
 
           <div className="card">
-            <h2>Analysis history</h2>
+            <h2>
+              Analysis history
+              <InfoPopover title="Analysis history">{sectionInfo.analysisHistory}</InfoPopover>
+            </h2>
             <table>
               <thead>
                 <tr>

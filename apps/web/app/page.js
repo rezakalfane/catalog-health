@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { listEnvironments, listAnalyses, redactEnvironment } from "@/lib/db";
+import { listEnvironments, listCompletedAnalyses, redactEnvironment } from "@/lib/db";
 import GradeLozenge from "@/components/GradeLozenge";
 import Sparkline from "@/components/Sparkline";
 
@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default function Dashboard() {
   const environments = listEnvironments().map(redactEnvironment);
-  const analyses = listAnalyses();
+  const analyses = listCompletedAnalyses();
 
   const latestByEnv = new Map();
   const historyByEnv = new Map();
