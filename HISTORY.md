@@ -390,3 +390,16 @@ bug reports, each reproduced and fixed against real models):
 - Honest fallback: products with a description but no verdict say "the judge
   did not return a result — try re-running", distinct from genuinely-missing
   descriptions.
+
+## 22. Clearer Ollama error messages — 2026-07-07
+
+> **Prompt:** ⚠ Semantic scoring skipped: Ollama returned 403 — is it
+> running at http://localhost:11434? (trying glm-5.2:cloud)
+
+**Summary:** `glm-5.2:cloud` is a subscription-gated Ollama cloud model the
+account can't access — Ollama returns 403 with an explanatory body, but the
+judge masked it behind a generic "is it running?". Fixed `ollamaJudge` to
+surface Ollama's own error message on non-OK responses (e.g. "this model
+requires a subscription, upgrade for access…") and to reserve the
+"is it running?" hint for actual connection failures (fetch throwing). Not a
+functional bug — a diagnosability fix.
