@@ -59,6 +59,10 @@ npm run dev
 - **Dashboard / environment pages** — latest grade, score sparkline over
   time, dimension breakdown, most common issues, weakest categories, and the
   impact-weighted top-fix list.
+- **Product table & drill-down** — every analysis stores its full per-product
+  results: browse them with filters (search, grade, issue, category, sort),
+  and open any product for its dimension scores, issues with fix hints,
+  traffic and impact.
 - **Settings** — connect an LLM for the optional semantic scoring pass:
   Anthropic (Claude, default `claude-opus-4-8`), OpenAI, or Ollama (local
   models, free, data never leaves the machine). API keys are stored
@@ -115,7 +119,9 @@ Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
 - [x] Async analysis jobs with progress
       (in-process runner — jobs don't survive a server restart; they're marked
       failed. A real queue is only needed if this outgrows one process)
-- [ ] Per-product drill-down page and full product table with filters
+- [x] Per-product drill-down page and full product table with filters
+      (`/analyses/[id]/products`; per-product rows persist with each new
+      analysis — older analyses predating this have summary only)
 - [ ] CSV / PDF export from the web app
 - [ ] Compare two analyses (what improved / regressed)
 - [ ] Swap JSON store for SQLite (better-sqlite3 or Prisma)

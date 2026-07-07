@@ -235,7 +235,13 @@ export default function AnalysisLiveReport({ analysisId, onAnalysis }) {
             <tbody>
               {summary.topFixes.slice(0, 15).map((r) => (
                 <tr key={r.id}>
-                  <td>{r.name}</td>
+                  <td>
+                    {analysis?.hasRows ? (
+                      <Link href={`/analyses/${analysisId}/products/${r.id}`}>{r.name}</Link>
+                    ) : (
+                      r.name
+                    )}
+                  </td>
                   <td>{r.sku}</td>
                   <td>{r.overall}</td>
                   <td>
@@ -252,6 +258,13 @@ export default function AnalysisLiveReport({ analysisId, onAnalysis }) {
           </table>
         ) : (
           <SkeletonLines count={8} />
+        )}
+        {analysis?.hasRows && summary.topFixes && (
+          <p style={{ marginBottom: 0 }}>
+            <Link href={`/analyses/${analysisId}/products`}>
+              Browse all {summary.productCount} products with filters →
+            </Link>
+          </p>
         )}
       </div>
     </>

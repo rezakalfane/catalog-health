@@ -194,3 +194,48 @@ semantic scoring (keep the rest)" under the progress bar. It calls
 chunks and the run completes with the 5 heuristic dimensions plus a
 "cancelled" note (partial verdicts are discarded so all products are scored
 by the same formula). Verified end-to-end on a demo run.
+
+## 12. Product table & per-product drill-down — 2026-07-07
+
+> **Prompt:** Can you create Per-product drill-down page and full product
+> table with filters?
+
+**Summary:** Analyses now persist their full per-product rows (served by
+`GET /api/analyses/[id]/products`; stripped from list/poll responses, which
+carry a `hasRows` flag instead). New `/analyses/[id]/products` page: every
+product with search, grade, issue, and category filters, six sort orders,
+50/page pagination. New `/analyses/[id]/products/[productId]` drill-down:
+health score, traffic & impact, per-dimension bars, categories, and an
+issues table where all 27 issue codes have human labels + fix hints
+(`components/issue-info.js`). Top-fixes tables and finished analysis pages
+link into both. Older analyses without rows get a friendly explanation.
+
+## 13. Dimension rubrics + channel-aware taxonomy — 2026-07-07
+
+> **Prompt:** [screenshot] Is it possible to add explanation for each
+> dimension scoring? Also "in too many categories" should take into account
+> the different channels... a product can be in 6 or more different
+> categories, but in many channels. It should be evaluated per channel.
+
+**Summary:** (a) Each dimension bar on the product page has an ⓘ popover
+with its exact point rubric (`components/dimension-info.js`). (b) The
+over-categorization check now groups category assignments per channel tree
+(`tree_id` from `/catalog/trees/categories`) and only flags >5 within a
+single tree — 12 assignments across 4 channels is 3 per channel and scores
+clean. `fetchCatalog` also pulls `/catalog/trees`; analyses persist a light
+category/tree map. Verified: 12-across-4-trees → no flag, 6-in-one-tree →
+flagged.
+
+## 14. Categories listed per channel — 2026-07-07
+
+> **Prompts:** Can you split the list of categories per channel (with
+> channel name and id) at the bottom of the page? / I need to list each
+> channel, and for each the list of categories.
+
+**Summary:** `fetchCatalog` additionally reads `/v3/channels` (optional —
+tolerates missing scope); trees carry their channel ids. The product page's
+Categories card is now a per-channel table: channel name, channel ID, that
+channel's category list, and a count highlighted red past the 5-category
+threshold. Trees serving several channels render one row per channel;
+single-tree stores and old analyses keep the flat list. Verified against the
+real store (5 trees / 5 named channels).

@@ -4,6 +4,7 @@ import {
   listAnalyses,
   analysisStatus,
   findRunningAnalysis,
+  redactAnalysis,
 } from "@/lib/db";
 import {
   startAnalysisRun,
@@ -17,7 +18,7 @@ export async function GET(request) {
   const status = url.searchParams.get("status");
   let analyses = listAnalyses(environmentId);
   if (status) analyses = analyses.filter((a) => analysisStatus(a) === status);
-  return NextResponse.json(analyses);
+  return NextResponse.json(analyses.map(redactAnalysis));
 }
 
 /**
