@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+
+# Local database — contains store API tokens. Never commit.
+data/
+
+# Environment files
+.env
+.env.*
+
+# CLI output
+health_report/
+
+.DS_Store
+*.log

@@ -1,0 +1,12 @@
+{
+  "name": "@catalog-health/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "catalog-health": "src/index.js" },
+  "dependencies": {
+    "@catalog-health/core": "*",
+    "yargs": "^17.7.2"
+  },
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,169 @@
+/* ---------------------------------------------------------------------------
+   Catalog Health — design tokens
+   Ink navy on paper white; one signal blue; health colors reserved for grades.
+--------------------------------------------------------------------------- */
+:root {
+  --ink: #131c30;
+  --ink-soft: #46506a;
+  --paper: #fafbfd;
+  --card: #ffffff;
+  --line: #e3e7f0;
+  --signal: #3b5eea;
+  --signal-soft: #eaeefd;
+
+  --grade-a: #158a5c;
+  --grade-b: #4d9e3f;
+  --grade-c: #d9930d;
+  --grade-d: #d96a1e;
+  --grade-f: #cc3e55;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(19, 28, 48, 0.06), 0 4px 16px rgba(19, 28, 48, 0.05);
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  margin: 0 0 0.5rem;
+}
+h1 { font-size: 1.7rem; }
+h2 { font-size: 1.2rem; }
+
+a { color: var(--signal); text-decoration: none; }
+a:hover { text-decoration: underline; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+/* Layout ------------------------------------------------------------------ */
+.shell { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--ink);
+  color: #dfe4f2;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sidebar .brand {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: #fff;
+  margin-bottom: 1.5rem;
+  line-height: 1.25;
+}
+.sidebar .brand span { color: #8fa3f5; }
+.sidebar a {
+  color: #b9c2dd;
+  padding: 0.45rem 0.6rem;
+  border-radius: 7px;
+  font-size: 0.92rem;
+}
+.sidebar a:hover { background: rgba(255, 255, 255, 0.08); text-decoration: none; color: #fff; }
+
+.main { flex: 1; padding: 2rem 2.5rem; max-width: 1100px; }
+
+@media (max-width: 720px) {
+  .shell { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 0.75rem 1rem; }
+  .sidebar .brand { margin: 0 1rem 0 0; }
+  .main { padding: 1.25rem; }
+}
+
+/* Cards, tables, forms ------------------------------------------------------ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th { text-align: left; color: var(--ink-soft); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: none; }
+
+label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--ink-soft); }
+input, select {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font: inherit;
+  background: #fff;
+  margin-bottom: 0.85rem;
+}
+
+button, .btn {
+  font: inherit;
+  font-weight: 600;
+  border: none;
+  border-radius: 7px;
+  padding: 0.55rem 1rem;
+  cursor: pointer;
+  background: var(--signal);
+  color: #fff;
+}
+button:hover, .btn:hover { filter: brightness(1.08); }
+button:disabled { opacity: 0.5; cursor: default; }
+button.secondary { background: var(--signal-soft); color: var(--signal); }
+button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem 0.5rem; }
+
+/* Grade lozenge — the signature element ------------------------------------- */
+.lozenge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: #fff;
+  border-radius: 12px;
+  width: 3rem;
+  height: 3rem;
+  font-size: 1.5rem;
+}
+.lozenge.small { width: 1.7rem; height: 1.7rem; font-size: 0.95rem; border-radius: 7px; }
+.lozenge.A { background: var(--grade-a); }
+.lozenge.B { background: var(--grade-b); }
+.lozenge.C { background: var(--grade-c); }
+.lozenge.D { background: var(--grade-d); }
+.lozenge.F { background: var(--grade-f); }
+
+/* Dimension bars ------------------------------------------------------------ */
+.dim-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem; }
+.dim-row .dim-name { width: 90px; font-size: 0.83rem; color: var(--ink-soft); text-transform: capitalize; }
+.dim-row .dim-track { flex: 1; height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.dim-row .dim-fill { height: 100%; background: var(--signal); border-radius: 4px; }
+.dim-row .dim-val { width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.83rem; }
+
+.muted { color: var(--ink-soft); font-size: 0.88rem; }
+.error { color: var(--grade-f); font-size: 0.9rem; }
+.page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}

@@ -1,0 +1,100 @@
+# Catalog Health
+
+Internal tool for CSMs and merchandising strategists: analyze a BigCommerce
+store's catalog health and AI-readiness, track it over time, and get a
+prioritized fix list weighted by traffic and sales.
+
+Monorepo with three parts:
+
+```
+packages/core   Shared engine: BigCommerce v3 Catalog API client (read-only),
+                scoring across 5 dimensions, summaries, CSV export.
+packages/cli    yargs CLI — run an analysis from the terminal, get a console
+                report + CSVs.
+apps/web        Next.js app — manage environments (stores), run analyses,
+                browse dashboards and per-environment history.
+```
+
+## Requirements
+
+- Node.js >= 18.18 (uses native `fetch`)
+- A BigCommerce API token per store with **Products: read-only** scope
+  (the tool only issues GET requests)
+
+## Setup
+
+```bash
+npm install
+```
+
+## CLI
+
+```bash
+# Instant demo with a synthetic 120-product catalog:
+npm run cli -- analyze --demo
+
+# Against a real store:
+npm run cli -- analyze --store-hash abc123 --token $BC_AUTH_TOKEN
+
+# Options: --out <dir> (CSV output, default health_report/), --json
+```
+
+Outputs a console report plus three CSVs: per-product scores, category
+rollups, and a top-50 fix list.
+
+## Web app
+
+```bash
+npm run dev
+# open http://localhost:3000
+```
+
+- **Environments** — add / edit / remove BigCommerce stores (name, store
+  hash, access token). Tokens are write-only in the UI: the API never sends
+  them back to the browser.
+- **New analysis** — pick an environment and run; or run a demo analysis with
+  no credentials to see the dashboards populated.
+- **Dashboard / environment pages** — latest grade, score sparkline over
+  time, dimension breakdown, most common issues, weakest categories, and the
+  impact-weighted top-fix list.
+
+## The five scoring dimensions
+
+| Dimension | Weight | What it checks |
+|---|---|---|
+| content | 25% | description depth, image count, alt text, title quality, brand |
+| structure | 25% | custom fields **vs category peers**, GTIN/UPC/MPN, variant completeness |
+| taxonomy | 15% | orphaned products, missing categories, over-categorization |
+| hygiene | 20% | zero prices, sale >= regular price, missing weight, visible-but-OOS |
+| feed | 15% | minimum field set for Google Shopping / AI-agent feeds |
+
+Impact score = `(100 - score) x log(1 + views + 5*sales)` using `view_count`
+and `total_sold` from the product record — no Orders scope needed.
+
+Weights and thresholds live in `packages/core/src/scoring.js`.
+
+## Data & security notes
+
+- Analyses and environments persist to `data/db.json` via
+  `apps/web/lib/db.js` — a deliberately thin JSON-file store meant to be
+  swapped for SQLite/Postgres later. Every consumer goes through that module,
+  so the swap is contained.
+- `data/` is **gitignored because it contains store API tokens in plain
+  text**. Fine for a local skeleton; before any shared deployment, move
+  tokens to a secrets manager and encrypt at rest.
+- There is **no authentication** on the web app yet. Do not expose it beyond
+  localhost as-is.
+- Company policy: no PII into Claude when developing against real catalogs,
+  and any deployment must start with a GRC review — no personal
+  Vercel/Netlify accounts.
+
+## Roadmap ideas
+
+- [ ] Semantic scoring pass (LLM judges whether descriptions answer
+      "what is it, who's it for, what's it made of")
+- [ ] Async analysis jobs with progress (large catalogs block the request today)
+- [ ] Per-product drill-down page and full product table with filters
+- [ ] CSV / PDF export from the web app
+- [ ] Compare two analyses (what improved / regressed)
+- [ ] Swap JSON store for SQLite (better-sqlite3 or Prisma)
+- [ ] Auth (SSO) before any shared deployment

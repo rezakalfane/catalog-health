@@ -1,0 +1,13 @@
+{
+  "name": "catalog-health",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "dev": "npm run dev --workspace @catalog-health/web",
+    "build": "npm run build --workspace @catalog-health/web",
+    "start": "npm run start --workspace @catalog-health/web",
+    "cli": "node packages/cli/src/index.js"
+  },
+  "engines": { "node": ">=18.18" }
+}
