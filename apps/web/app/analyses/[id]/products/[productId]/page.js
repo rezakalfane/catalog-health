@@ -11,6 +11,7 @@ import { dimensionInfo } from "@/components/dimension-info";
 export default function ProductDrilldownPage() {
   const { id, productId } = useParams();
   const [data, setData] = useState(null);
+  const [storeHash, setStoreHash] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -22,6 +23,15 @@ export default function ProductDrilldownPage() {
       })
       .catch((err) => setError(err.message));
   }, [id]);
+
+  // Store hash for the deep link into the BigCommerce control panel.
+  const environmentId = data?.environmentId;
+  useEffect(() => {
+    if (!environmentId || environmentId === "demo") return;
+    fetch(`/api/environments/${environmentId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((env) => env?.storeHash && setStoreHash(env.storeHash));
+  }, [environmentId]);
 
   const row = data?.rows.find((r) => String(r.id) === String(productId));
 
@@ -85,8 +95,38 @@ export default function ProductDrilldownPage() {
   return (
     <>
       <div className="page-head">
-        <div>
-          <h1>{row.name || `#${row.id}`}</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          {row.details?.thumbnailUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={row.details.thumbnailUrl}
+              alt={row.name || "Product thumbnail"}
+              width={72}
+              height={72}
+              style={{
+                borderRadius: 10,
+                objectFit: "cover",
+                border: "1px solid var(--line)",
+                background: "#fff",
+                flexShrink: 0,
+              }}
+            />
+          )}
+          <div>
+          <h1>
+            {storeHash ? (
+              <a
+                href={`https://store-${storeHash}.mybigcommerce.com/manage/products/edit/${row.id}`}
+                target="_blank"
+                rel="noreferrer"
+                title="Edit in the BigCommerce control panel"
+              >
+                {row.name || `#${row.id}`} ↗
+              </a>
+            ) : (
+              row.name || `#${row.id}`
+            )}
+          </h1>
           <p className="muted">
             {row.sku && <>SKU {row.sku} · </>}
             <Link href={`/analyses/${id}/products`}>all products</Link> ·{" "}
@@ -98,6 +138,7 @@ export default function ProductDrilldownPage() {
               </>
             )}
           </p>
+          </div>
         </div>
       </div>
 
@@ -148,6 +189,88 @@ export default function ProductDrilldownPage() {
             Click a dimension&apos;s ⓘ for how its points are earned.
           </p>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Product details</h2>
+        {!row.details ? (
+          <p className="muted">
+            This analysis predates attribute capture — run a new analysis to
+            see the product attributes behind the scores.
+          </p>
+        ) : (
+          <table>
+            <tbody>
+              {[
+                ["Title", `${row.name || "—"} (${(row.name || "").length} chars)`],
+                [
+                  "Description",
+                  row.details.descriptionChars ? (
+                    <>
+                      {row.details.descriptionChars} characters
+                      {row.details.descriptionExcerpt && (
+                        <span className="muted" style={{ display: "block", fontStyle: "italic" }}>
+                          “{row.details.descriptionExcerpt}
+                          {row.details.descriptionChars > 255 ? "…" : ""}”
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    "missing"
+                  ),
+                ],
+                [
+                  "Images",
+                  row.details.imageCount
+                    ? `${row.details.imageCount} (${row.details.imagesWithAlt} with alt text)`
+                    : "none",
+                ],
+                ["Brand", row.details.hasBrand ? "assigned" : "not assigned"],
+                [
+                  "Custom fields",
+                  `${row.details.customFieldCount}` +
+                    (row.details.peerMedianCustomFields
+                      ? ` (category peers' median: ${row.details.peerMedianCustomFields})`
+                      : ""),
+                ],
+                ["GTIN", row.details.gtin || "—"],
+                ["UPC", row.details.upc || "—"],
+                ["MPN", row.details.mpn || "—"],
+                [
+                  "Options / variants",
+                  row.details.optionCount
+                    ? `${row.details.optionCount} options, ${row.details.variantCount} variants` +
+                      (row.details.incompleteVariants
+                        ? `, ${row.details.incompleteVariants} with missing option values`
+                        : "")
+                    : "none",
+                ],
+                [
+                  "Price",
+                  row.details.price > 0
+                    ? `$${row.details.price}` +
+                      (row.details.salePrice ? ` (sale: $${row.details.salePrice})` : "")
+                    : "0",
+                ],
+                ["Weight", row.details.weight > 0 ? String(row.details.weight) : "not set"],
+                [
+                  "Visibility & stock",
+                  `${row.details.isVisible ? "visible" : "hidden"} · inventory tracking: ${row.details.inventoryTracking}` +
+                    (row.details.inventoryTracking !== "none"
+                      ? ` · ${row.details.inventoryLevel} in stock`
+                      : ""),
+                ],
+              ].map(([label, value]) => (
+                <tr key={label}>
+                  <td className="muted" style={{ width: 180 }}>
+                    {label}
+                  </td>
+                  <td>{value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="card">

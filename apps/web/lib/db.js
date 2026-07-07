@@ -238,6 +238,7 @@ export function getAnalysisRows(analysisId) {
       totalSold: r.total_sold,
       impact: r.impact,
       issues: parse(r.issues),
+      details: parse(r.details),
     }));
 }
 
@@ -294,8 +295,8 @@ export function updateAnalysis(analysisId, patch) {
 
   const insertProduct = db.prepare(
     `INSERT INTO analysis_products
-       (analysis_id, product_id, name, sku, overall, grade, impact, view_count, total_sold, scores, issues, categories)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       (analysis_id, product_id, name, sku, overall, grade, impact, view_count, total_sold, scores, issues, categories, details)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
   const run = db.transaction(() => {
     if (sets.length) {
@@ -308,7 +309,8 @@ export function updateAnalysis(analysisId, patch) {
           analysisId, r.id, r.name || "", r.sku || "", r.overall, r.grade,
           r.impact ?? 0, r.viewCount ?? 0, r.totalSold ?? 0,
           JSON.stringify(r.scores || {}), JSON.stringify(r.issues || []),
-          JSON.stringify(r.categories || [])
+          JSON.stringify(r.categories || []),
+          r.details ? JSON.stringify(r.details) : null
         );
       }
     }

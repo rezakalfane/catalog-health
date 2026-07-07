@@ -255,6 +255,38 @@ export function analyzeCatalog(products, categories) {
     const cats = p.categories?.length ? p.categories : [null];
     const peer = Math.max(...cats.map((c) => medianCf.get(c) || 0), 0);
 
+    // The raw facts each dimension inspected — persisted with the row so
+    // the product drill-down can show what the scores were based on.
+    const desc = stripHtml(p.description);
+    const images = p.images || [];
+    const options = p.options || [];
+    const variants = p.variants || [];
+    const thumb = images.find((i) => i.is_thumbnail) || images[0];
+    const details = {
+      descriptionChars: desc.length,
+      descriptionExcerpt: desc.slice(0, 255),
+      thumbnailUrl: thumb?.url_thumbnail || thumb?.url_standard || "",
+      imageCount: images.length,
+      imagesWithAlt: images.filter((i) => (i.description || "").trim()).length,
+      hasBrand: Boolean(p.brand_id),
+      customFieldCount: (p.custom_fields || []).length,
+      peerMedianCustomFields: peer,
+      gtin: p.gtin || "",
+      upc: p.upc || "",
+      mpn: p.mpn || "",
+      optionCount: options.length,
+      variantCount: variants.length,
+      incompleteVariants: options.length
+        ? variants.filter((v) => (v.option_values || []).length < options.length).length
+        : 0,
+      price: p.price ?? 0,
+      salePrice: p.sale_price ?? 0,
+      weight: p.weight ?? 0,
+      isVisible: p.is_visible !== false,
+      inventoryTracking: p.inventory_tracking || "none",
+      inventoryLevel: p.inventory_level ?? 0,
+    };
+
     const scores = {
       content: scoreContent(p, issues),
       structure: scoreStructure(p, peer, issues),
@@ -285,6 +317,7 @@ export function analyzeCatalog(products, categories) {
       totalSold: sold,
       impact,
       issues,
+      details,
     };
   });
 }

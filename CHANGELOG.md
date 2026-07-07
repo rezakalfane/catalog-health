@@ -7,12 +7,34 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/product-details — 2026-07-07
+
+Product-detail attributes, control-panel deep link, thumbnails, and
+column sorting. Merged into `main` (no-ff), branch deleted after merge;
+hashes backfilled in the next entry. HISTORY.md entry 18.
+
+Highlights:
+
+- Scoring engine records the raw attributes behind each score (description
+  length + 255-char excerpt, thumbnail URL, images/alt, brand, custom
+  fields + peer median, identifiers, variants, price/weight/stock) in a
+  JSON `details` field per product row.
+- First SQLite schema migration (`user_version` 1→2: `analysis_products.details`),
+  plus a `getDb()` cache-heal so hot-reloaded dev servers apply new
+  migrations without a restart.
+- Drill-down page: Product details table above Issues, title deep-links to
+  the BigCommerce control panel, main thumbnail top-left, description
+  excerpt.
+- Shared `ProductThumb` (with aligned placeholder) in the all-products table
+  and Top-fixes tables; click-to-sort column headers on the all-products
+  table (replaces the sort dropdown).
+
 ## feat/score-history-hover — 2026-07-07
 
 Interactive score-history sparkline: hover a point for date, product count,
 score, and grade; click through to that analysis. Keyboard-accessible hit
-targets. Merged into `main` (no-ff), branch deleted after merge. HISTORY.md
-entry 17.
+targets. Commit `459dd37`, merged into `main` as `4d29efc` (no-ff), branch
+deleted after merge. HISTORY.md entry 17.
 
 ## feat/sqlite-store — 2026-07-07
 

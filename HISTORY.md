@@ -285,3 +285,36 @@ analysis's report. Invisible ~10px hit areas make the small dots easy to
 target, and points are keyboard-accessible. The environment page and
 dashboard pass `id`/`grade`/`productCount` with each history point; points
 without an id render as a plain non-clickable sparkline.
+
+## 18. Product details, thumbnails & column sorting — 2026-07-07
+
+> **Prompts:** (a) In the product detail page, add a "Product Details"
+> section above Issues showing product attributes (title + everything the
+> scoring checks, except categories), and deep-link the product title to the
+> BigCommerce control panel. (b) Show the main product thumbnail top-left of
+> the title/SKU, and the first 255 chars of the description when available.
+> (c) Show a small thumbnail (or placeholder icon) left of the title in the
+> all-products table and Top fixes sections. (d) Add column sorting to the
+> all-products view.
+
+**Summary:** The scoring engine now records, per product, the raw facts each
+dimension inspected — description length + 255-char excerpt, thumbnail URL,
+image/alt counts, brand, custom-field count (+ peer median), GTIN/UPC/MPN,
+option/variant completeness, price/sale/weight, visibility & stock — in a
+JSON `details` field on each row. This is the store's **first schema
+migration** (SQLite `user_version` 1→2: new `analysis_products.details`
+column); a cache-healing fix in `getDb()` lets a hot-reloaded dev server
+apply new migrations without a restart.
+
+Product drill-down page: a **Product details** table above Issues; the
+title deep-links to the BigCommerce CP
+(`store-{hash}.mybigcommerce.com/manage/products/edit/{id}`, hash from the
+environment); the main thumbnail renders top-left; the description row shows
+the 255-char excerpt. A shared `ProductThumb` component (28px, with a
+fixed-size image-off placeholder so rows stay aligned) appears left of the
+title in the all-products table and both Top-fixes tables. The all-products
+table gained **click-to-sort column headers** (▲/▼, per-column default
+direction, reverse on re-click), replacing the Sort-by dropdown.
+
+Attributes/thumbnails are captured at analysis time, so they populate for
+new analyses; older ones show placeholders / a "predates capture" note.

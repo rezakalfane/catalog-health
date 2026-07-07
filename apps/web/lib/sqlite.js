@@ -67,6 +67,12 @@ const MIGRATIONS = [
     value TEXT NOT NULL             -- JSON
   );
   `,
+
+  // 2 — raw per-product facts the scores were based on (description length,
+  // images, identifiers, price/weight/stock…), shown on the drill-down page
+  `
+  ALTER TABLE analysis_products ADD COLUMN details TEXT; -- JSON
+  `,
 ];
 
 function migrate(db) {
@@ -154,13 +160,28 @@ function importLegacyJson(db) {
 
 /** Open (or reuse) the process-wide connection. Survives dev hot reload. */
 export function getDb() {
-  if (globalThis.__catalogHealthSqlite) return globalThis.__catalogHealthSqlite;
+  let cached = globalThis.__catalogHealthSqlite;
+  // Heal a cache written by an older version of this module, which stored
+  // the bare connection instead of { db, migrated }.
+  if (cached && !cached.db) {
+    cached = { db: cached, migrated: 0 };
+    globalThis.__catalogHealthSqlite = cached;
+  }
+  if (cached) {
+    // Dev hot reload keeps the connection alive across code changes — apply
+    // any migrations that shipped since it was opened.
+    if (cached.migrated < MIGRATIONS.length) {
+      migrate(cached.db);
+      cached.migrated = MIGRATIONS.length;
+    }
+    return cached.db;
+  }
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const db = new Database(DB_PATH);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   migrate(db);
   importLegacyJson(db);
-  globalThis.__catalogHealthSqlite = db;
+  globalThis.__catalogHealthSqlite = { db, migrated: MIGRATIONS.length };
   return db;
 }

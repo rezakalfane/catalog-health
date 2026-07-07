@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import GradeLozenge from "@/components/GradeLozenge";
 import DimensionBars from "@/components/DimensionBars";
+import ProductThumb from "@/components/ProductThumb";
 import InfoPopover from "@/components/InfoPopover";
 import { sectionInfo } from "@/components/section-info";
 
@@ -236,11 +237,14 @@ export default function AnalysisLiveReport({ analysisId, onAnalysis }) {
               {summary.topFixes.slice(0, 15).map((r) => (
                 <tr key={r.id}>
                   <td>
-                    {analysis?.hasRows ? (
-                      <Link href={`/analyses/${analysisId}/products/${r.id}`}>{r.name}</Link>
-                    ) : (
-                      r.name
-                    )}
+                    <span className="prod-cell">
+                      <ProductThumb src={r.details?.thumbnailUrl} alt="" />
+                      {analysis?.hasRows ? (
+                        <Link href={`/analyses/${analysisId}/products/${r.id}`}>{r.name}</Link>
+                      ) : (
+                        r.name
+                      )}
+                    </span>
                   </td>
                   <td>{r.sku}</td>
                   <td>{r.overall}</td>

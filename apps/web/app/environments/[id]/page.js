@@ -12,6 +12,7 @@ import DimensionBars from "@/components/DimensionBars";
 import Sparkline from "@/components/Sparkline";
 import RunAnalysisAction from "@/components/RunAnalysisAction";
 import AnalysisLiveReport from "@/components/AnalysisLiveReport";
+import ProductThumb from "@/components/ProductThumb";
 import InfoPopover from "@/components/InfoPopover";
 import { sectionInfo } from "@/components/section-info";
 
@@ -170,11 +171,14 @@ export default async function EnvironmentDetail({ params }) {
                 {latest.summary.topFixes.slice(0, 15).map((r) => (
                   <tr key={r.id}>
                     <td>
-                      {latest.hasRows ? (
-                        <Link href={`/analyses/${latest.id}/products/${r.id}`}>{r.name}</Link>
-                      ) : (
-                        r.name
-                      )}
+                      <span className="prod-cell">
+                        <ProductThumb src={r.details?.thumbnailUrl} alt="" />
+                        {latest.hasRows ? (
+                          <Link href={`/analyses/${latest.id}/products/${r.id}`}>{r.name}</Link>
+                        ) : (
+                          r.name
+                        )}
+                      </span>
                     </td>
                     <td>{r.sku}</td>
                     <td>{r.overall}</td>
