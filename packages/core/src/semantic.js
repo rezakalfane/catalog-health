@@ -199,23 +199,36 @@ function openaiJudge({ apiKey, model }) {
 function ollamaJudge({ baseUrl, model }) {
   const base = (baseUrl || DEFAULT_OLLAMA_BASE_URL).replace(/\/$/, "");
   return async function judgeChunk(products) {
-    const res = await fetch(`${base}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        stream: false,
-        format: VERDICTS_SCHEMA, // Ollama structured outputs
-        // Verdicts + reasons for a chunk can be long; the default output cap
-        // truncates the JSON and breaks parsing. Give it room.
-        options: { num_predict: 8192 },
-        messages: [
-          { role: "system", content: JUDGE_SYSTEM },
-          { role: "user", content: chunkPayload(products) },
-        ],
-      }),
-    });
-    if (!res.ok) throw new Error(`Ollama returned ${res.status} — is it running at ${base}?`);
+    let res;
+    try {
+      res = await fetch(`${base}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model,
+          stream: false,
+          format: VERDICTS_SCHEMA, // Ollama structured outputs
+          // Verdicts + reasons for a chunk can be long; the default output cap
+          // truncates the JSON and breaks parsing. Give it room.
+          options: { num_predict: 8192 },
+          messages: [
+            { role: "system", content: JUDGE_SYSTEM },
+            { role: "user", content: chunkPayload(products) },
+          ],
+        }),
+      });
+    } catch {
+      // fetch threw → couldn't connect at all
+      throw new Error(`Could not reach Ollama at ${base} — is it running?`);
+    }
+    if (!res.ok) {
+      // Surface Ollama's own message (e.g. cloud-model subscription/auth
+      // errors) instead of a misleading "is it running?".
+      const detail = await res.json().catch(() => null);
+      throw new Error(
+        detail?.error ? `Ollama (${model}): ${detail.error}` : `Ollama returned HTTP ${res.status}`
+      );
+    }
     const data = await res.json();
     return sanitizeVerdicts(parseJsonLoose(data.message?.content || "{}"), new Set(products.map((p) => p.id)));
   };
