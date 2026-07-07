@@ -164,7 +164,7 @@ export default async function EnvironmentDetail({ params }) {
                 {latest.summary.topFixes.slice(0, 15).map((r) => (
                   <tr key={r.id}>
                     <td>
-                      {latest.rows?.length ? (
+                      {latest.hasRows ? (
                         <Link href={`/analyses/${latest.id}/products/${r.id}`}>{r.name}</Link>
                       ) : (
                         r.name
@@ -181,7 +181,7 @@ export default async function EnvironmentDetail({ params }) {
                 ))}
               </tbody>
             </table>
-            {latest.rows?.length > 0 && (
+            {latest.hasRows && (
               <p style={{ marginBottom: 0 }}>
                 <Link href={`/analyses/${latest.id}/products`}>
                   Browse all {latest.summary.productCount} products with filters →

@@ -7,6 +7,22 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/sqlite-store — 2026-07-07
+
+SQLite replaces the JSON-file store. Merged into `main` (no-ff), branch
+deleted after merge; hashes backfilled in the next entry. HISTORY.md
+entry 16.
+
+Highlights:
+
+- better-sqlite3 (WAL) behind the unchanged `lib/db.js` function surface;
+  `lib/sqlite.js` owns connection, schema, and append-only versioned
+  migrations (`PRAGMA user_version`).
+- Tables: environments, analyses (JSON summary/progress/catalog columns),
+  analysis_products (per-product rows, FK cascade, indexed), settings.
+- Legacy `data/db.json` auto-imports on first open (renamed to
+  `db.json.migrated`); progress updates became single-row UPDATEs.
+
 ## feat/product-drilldown — 2026-07-07
 
 Full product table with filters, per-product drill-down pages, and

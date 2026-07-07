@@ -102,10 +102,14 @@ Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
 
 ## Data & security notes
 
-- Analyses and environments persist to `data/db.json` via
-  `apps/web/lib/db.js` — a deliberately thin JSON-file store meant to be
-  swapped for SQLite/Postgres later. Every consumer goes through that module,
-  so the swap is contained.
+- Data persists to `data/catalog-health.sqlite` (better-sqlite3, WAL mode).
+  `apps/web/lib/db.js` is the only data-access surface — every page and API
+  route goes through it — and `apps/web/lib/sqlite.js` owns the connection,
+  schema, and migrations (append a block to `MIGRATIONS`; versions tracked
+  via `PRAGMA user_version`). Tables: `environments`, `analyses`,
+  `analysis_products` (per-product results, FK-cascaded), `settings`.
+- A leftover `data/db.json` from the previous JSON-file store is imported
+  automatically on first run and renamed to `db.json.migrated`.
 - `data/` is **gitignored because it contains store API tokens and LLM API
   keys in plain text**. Fine for a local skeleton; before any shared
   deployment, move secrets to a secrets manager and encrypt at rest.
@@ -128,5 +132,6 @@ Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
       analysis — older analyses predating this have summary only)
 - [ ] CSV / PDF export from the web app
 - [ ] Compare two analyses (what improved / regressed)
-- [ ] Swap JSON store for SQLite (better-sqlite3 or Prisma)
+- [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
+      auto-import of the legacy db.json)
 - [ ] Auth (SSO) before any shared deployment

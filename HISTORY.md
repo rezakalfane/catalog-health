@@ -252,3 +252,22 @@ covers LLM API keys living in `data/db.json` alongside store tokens.
 CHANGELOG: backfilled commit/merge hashes for chore/changelog,
 feat/semantic-scoring, and feat/product-drilldown. Committed directly to
 main (docs-only chore, at the user's direction).
+
+## 16. SQLite store — 2026-07-07
+
+> **Prompt:** Let's create a new branch and get to sqllite implementation
+> instead of a json file, with some clean structure, that would be easy to
+> maintain and evolve.
+
+**Summary:** Replaced the JSON-file store with SQLite (better-sqlite3, WAL).
+`lib/sqlite.js` owns the connection, schema, and a versioned migration
+runner (`PRAGMA user_version`; append-only `MIGRATIONS`); `lib/db.js` keeps
+the exact same function surface (synchronous, so no consumer rewrites) —
+only the products endpoint and environment page switched to `hasRows` /
+`getAnalysisRows()`. Tables: `environments`, `analyses` (JSON columns for
+summary/progress/catalog), `analysis_products` (real rows, FK cascade,
+indexed), `settings`. A leftover `data/db.json` auto-imports on first open
+and is renamed `db.json.migrated` — the user's 4 environments, 24 analyses,
+2,736 product rows, and LLM settings migrated intact. Progress updates are
+now single-row UPDATEs instead of full-file JSON rewrites. better-sqlite3 is
+declared in `serverExternalPackages` (native module).
