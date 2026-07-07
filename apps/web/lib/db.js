@@ -1,38 +1,26 @@
 /**
- * Minimal JSON-file data store. Zero dependencies, easy to swap for
- * SQLite/Postgres later — every consumer goes through these functions.
+ * Data access layer, backed by SQLite (lib/sqlite.js owns the connection,
+ * schema, and migrations). The function surface is the stable contract —
+ * every consumer goes through here, so the storage engine can keep evolving
+ * without touching pages or API routes.
  *
- * Data lives in <repo>/data/db.json (gitignored — it contains API tokens).
+ * Analyses are returned WITHOUT their per-product rows (use
+ * getAnalysisRows) but WITH a cheap `hasRows` flag.
  */
-import fs from "node:fs";
-import path from "node:path";
 import crypto from "node:crypto";
-
-const DATA_DIR = path.join(process.cwd(), "..", "..", "data");
-const DB_PATH = path.join(DATA_DIR, "db.json");
-
-function load() {
-  try {
-    return JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
-  } catch {
-    return { environments: [], analyses: [], settings: {} };
-  }
-}
-
-function save(db) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
-}
+import { getDb } from "@/lib/sqlite";
 
 const id = () => crypto.randomUUID();
+const parse = (s) => (s == null ? null : JSON.parse(s));
 
 // -- Settings ----------------------------------------------------------------
 //
-// settings.llm = { provider: "anthropic" | "ollama", model, apiKey, baseUrl }
+// settings.llm = { provider: "anthropic" | "openai" | "ollama", model, apiKey, baseUrl }
 // The API key is write-only towards the browser, like store tokens.
 
 export function getSettings() {
-  return load().settings || {};
+  const rows = getDb().prepare("SELECT key, value FROM settings").all();
+  return Object.fromEntries(rows.map((r) => [r.key, parse(r.value)]));
 }
 
 /** Env-var API key fallback for a provider (Ollama needs none). */
@@ -44,17 +32,18 @@ export function envKeyFor(provider) {
 
 /** Merge an LLM settings patch. An empty/absent apiKey keeps the stored one. */
 export function updateLlmSettings(patch) {
-  const db = load();
-  db.settings = db.settings || {};
-  const llm = db.settings.llm || {};
+  const db = getDb();
+  const llm = getSettings().llm || {};
   // A key saved for one provider must never be sent to another.
   if (patch.provider && patch.provider !== llm.provider) delete llm.apiKey;
   for (const key of ["provider", "model", "baseUrl"]) {
     if (patch[key] !== undefined) llm[key] = patch[key];
   }
   if (patch.apiKey) llm.apiKey = patch.apiKey;
-  db.settings.llm = llm;
-  save(db);
+  db.prepare(
+    `INSERT INTO settings (key, value) VALUES ('llm', ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+  ).run(JSON.stringify(llm));
   return llm;
 }
 
@@ -77,16 +66,31 @@ export function redactLlmSettings(settings = getSettings()) {
 
 // -- Environments -----------------------------------------------------------
 
+function toEnvironment(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    storeHash: row.store_hash,
+    accessToken: row.access_token,
+    createdAt: row.created_at,
+  };
+}
+
 export function listEnvironments() {
-  return load().environments;
+  return getDb()
+    .prepare("SELECT * FROM environments ORDER BY created_at")
+    .all()
+    .map(toEnvironment);
 }
 
 export function getEnvironment(envId) {
-  return load().environments.find((e) => e.id === envId) || null;
+  return toEnvironment(
+    getDb().prepare("SELECT * FROM environments WHERE id = ?").get(envId)
+  );
 }
 
 export function createEnvironment({ name, storeHash, accessToken }) {
-  const db = load();
   const env = {
     id: id(),
     name,
@@ -94,27 +98,42 @@ export function createEnvironment({ name, storeHash, accessToken }) {
     accessToken,
     createdAt: new Date().toISOString(),
   };
-  db.environments.push(env);
-  save(db);
+  getDb()
+    .prepare(
+      `INSERT INTO environments (id, name, store_hash, access_token, created_at)
+       VALUES (@id, @name, @storeHash, @accessToken, @createdAt)`
+    )
+    .run(env);
   return env;
 }
 
 export function updateEnvironment(envId, patch) {
-  const db = load();
-  const env = db.environments.find((e) => e.id === envId);
+  const env = getEnvironment(envId);
   if (!env) return null;
   for (const key of ["name", "storeHash", "accessToken"]) {
     if (patch[key] !== undefined && patch[key] !== "") env[key] = patch[key];
   }
-  save(db);
+  getDb()
+    .prepare(
+      `UPDATE environments SET name = @name, store_hash = @storeHash,
+        access_token = @accessToken WHERE id = @id`
+    )
+    .run(env);
   return env;
 }
 
 export function deleteEnvironment(envId) {
-  const db = load();
-  db.environments = db.environments.filter((e) => e.id !== envId);
-  db.analyses = db.analyses.filter((a) => a.environmentId !== envId);
-  save(db);
+  const db = getDb();
+  const run = db.transaction(() => {
+    // analysis_products cascade from analyses; analyses have no FK ("demo").
+    db.prepare(
+      `DELETE FROM analysis_products WHERE analysis_id IN
+         (SELECT id FROM analyses WHERE environment_id = ?)`
+    ).run(envId);
+    db.prepare("DELETE FROM analyses WHERE environment_id = ?").run(envId);
+    db.prepare("DELETE FROM environments WHERE id = ?").run(envId);
+  });
+  run();
 }
 
 /** Strip the access token before sending an environment to the client. */
@@ -127,21 +146,50 @@ export function redactEnvironment(env) {
 // -- Analyses ---------------------------------------------------------------
 //
 // An analysis is also the job record for an async run:
-//   status:   "running" | "done" | "failed"  (records predating async = done)
+//   status:   "running" | "done" | "failed"
 //   progress: { percent, stage, label, detail } while running
 //   summary:  filled in progressively by the runner, complete once done
 
-/** Records created before async runs have no status — treat them as done. */
+const ANALYSIS_COLS = `
+  a.id, a.environment_id, a.created_at, a.status, a.progress, a.summary,
+  a.error, a.warning,
+  EXISTS (SELECT 1 FROM analysis_products p WHERE p.analysis_id = a.id) AS has_rows
+`;
+
+function toAnalysis(row, { withCatalog = false } = {}) {
+  if (!row) return null;
+  const analysis = {
+    id: row.id,
+    environmentId: row.environment_id,
+    createdAt: row.created_at,
+    status: row.status,
+    progress: parse(row.progress),
+    summary: parse(row.summary),
+    error: row.error ?? null,
+    warning: row.warning ?? null,
+    hasRows: Boolean(row.has_rows),
+  };
+  if (withCatalog) analysis.catalog = parse(row.catalog);
+  return analysis;
+}
+
 export function analysisStatus(analysis) {
   return analysis.status || "done";
 }
 
 export function listAnalyses(environmentId) {
-  const all = load().analyses;
-  const filtered = environmentId
-    ? all.filter((a) => a.environmentId === environmentId)
-    : all;
-  return filtered.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const db = getDb();
+  const rows = environmentId
+    ? db
+        .prepare(
+          `SELECT ${ANALYSIS_COLS} FROM analyses a
+           WHERE a.environment_id = ? ORDER BY a.created_at DESC`
+        )
+        .all(environmentId)
+    : db
+        .prepare(`SELECT ${ANALYSIS_COLS} FROM analyses a ORDER BY a.created_at DESC`)
+        .all();
+  return rows.map((r) => toAnalysis(r));
 }
 
 /** Only successfully completed analyses — what dashboards should read. */
@@ -150,32 +198,50 @@ export function listCompletedAnalyses(environmentId) {
 }
 
 export function findRunningAnalysis(environmentId) {
-  return (
-    load().analyses.find(
-      (a) =>
-        a.status === "running" &&
-        (!environmentId || a.environmentId === environmentId)
-    ) || null
-  );
+  const db = getDb();
+  const row = environmentId
+    ? db
+        .prepare(
+          `SELECT ${ANALYSIS_COLS} FROM analyses a
+           WHERE a.status = 'running' AND a.environment_id = ? LIMIT 1`
+        )
+        .get(environmentId)
+    : db
+        .prepare(`SELECT ${ANALYSIS_COLS} FROM analyses a WHERE a.status = 'running' LIMIT 1`)
+        .get();
+  return toAnalysis(row);
 }
 
 export function getAnalysis(analysisId) {
-  return load().analyses.find((a) => a.id === analysisId) || null;
+  const row = getDb()
+    .prepare(`SELECT ${ANALYSIS_COLS}, a.catalog FROM analyses a WHERE a.id = ?`)
+    .get(analysisId);
+  return toAnalysis(row, { withCatalog: true });
 }
 
-/**
- * Drop the per-product rows before sending an analysis over the API — they
- * can be megabytes on large catalogs and the report pages only need the
- * summary. Rows are served by /api/analyses/[id]/products.
- */
-export function redactAnalysis(analysis) {
-  if (!analysis) return null;
-  const { rows, catalog, ...rest } = analysis;
-  return { ...rest, hasRows: Boolean(rows?.length) };
+/** Per-product rows for one analysis (the app-shaped objects). */
+export function getAnalysisRows(analysisId) {
+  return getDb()
+    .prepare(
+      `SELECT * FROM analysis_products WHERE analysis_id = ? ORDER BY impact DESC`
+    )
+    .all(analysisId)
+    .map((r) => ({
+      id: r.product_id,
+      sku: r.sku,
+      name: r.name,
+      categories: parse(r.categories),
+      overall: r.overall,
+      grade: r.grade,
+      scores: parse(r.scores),
+      viewCount: r.view_count,
+      totalSold: r.total_sold,
+      impact: r.impact,
+      issues: parse(r.issues),
+    }));
 }
 
 export function createAnalysis({ environmentId, summary = null, status = "done", progress = null }) {
-  const db = load();
   const analysis = {
     id: id(),
     environmentId,
@@ -183,17 +249,81 @@ export function createAnalysis({ environmentId, summary = null, status = "done",
     status,
     progress,
     summary,
+    error: null,
+    warning: null,
+    hasRows: false,
   };
-  db.analyses.push(analysis);
-  save(db);
+  getDb()
+    .prepare(
+      `INSERT INTO analyses (id, environment_id, created_at, status, progress, summary)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      analysis.id,
+      environmentId,
+      analysis.createdAt,
+      status,
+      progress ? JSON.stringify(progress) : null,
+      summary ? JSON.stringify(summary) : null
+    );
   return analysis;
 }
 
+/**
+ * Patch an analysis. JSON fields (progress/summary/catalog) are replaced
+ * wholesale; a `rows` array replaces the per-product results.
+ */
 export function updateAnalysis(analysisId, patch) {
-  const db = load();
-  const analysis = db.analyses.find((a) => a.id === analysisId);
+  const db = getDb();
+  if (!db.prepare("SELECT 1 FROM analyses WHERE id = ?").get(analysisId)) return null;
+
+  const sets = [];
+  const args = { id: analysisId };
+  for (const key of ["status", "error", "warning"]) {
+    if (key in patch) {
+      sets.push(`${key} = @${key}`);
+      args[key] = patch[key];
+    }
+  }
+  for (const key of ["progress", "summary", "catalog"]) {
+    if (key in patch) {
+      sets.push(`${key} = @${key}`);
+      args[key] = patch[key] == null ? null : JSON.stringify(patch[key]);
+    }
+  }
+
+  const insertProduct = db.prepare(
+    `INSERT INTO analysis_products
+       (analysis_id, product_id, name, sku, overall, grade, impact, view_count, total_sold, scores, issues, categories)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  const run = db.transaction(() => {
+    if (sets.length) {
+      db.prepare(`UPDATE analyses SET ${sets.join(", ")} WHERE id = @id`).run(args);
+    }
+    if (Array.isArray(patch.rows)) {
+      db.prepare("DELETE FROM analysis_products WHERE analysis_id = ?").run(analysisId);
+      for (const r of patch.rows) {
+        insertProduct.run(
+          analysisId, r.id, r.name || "", r.sku || "", r.overall, r.grade,
+          r.impact ?? 0, r.viewCount ?? 0, r.totalSold ?? 0,
+          JSON.stringify(r.scores || {}), JSON.stringify(r.issues || []),
+          JSON.stringify(r.categories || [])
+        );
+      }
+    }
+  });
+  run();
+  return getAnalysis(analysisId);
+}
+
+/**
+ * Shape an analysis for API responses: drops the bulky catalog metadata
+ * (rows are never attached in the first place; `hasRows` says they exist
+ * and /api/analyses/[id]/products serves them).
+ */
+export function redactAnalysis(analysis) {
   if (!analysis) return null;
-  Object.assign(analysis, patch);
-  save(db);
-  return analysis;
+  const { catalog, ...rest } = analysis;
+  return rest;
 }

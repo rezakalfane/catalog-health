@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAnalysis } from "@/lib/db";
+import { getAnalysis, getAnalysisRows } from "@/lib/db";
 
 /**
  * Full per-product results for one analysis, plus a category id -> name map
@@ -9,7 +9,7 @@ export async function GET(request, { params }) {
   const { id } = await params;
   const analysis = getAnalysis(id);
   if (!analysis) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (!analysis.rows?.length) {
+  if (!analysis.hasRows) {
     return NextResponse.json(
       { error: "This analysis has no per-product data (it predates per-product storage). Run a new analysis." },
       { status: 404 }
@@ -43,6 +43,6 @@ export async function GET(request, { params }) {
     treeNames,
     treeChannels,
     channelNames,
-    rows: analysis.rows,
+    rows: getAnalysisRows(id),
   });
 }
