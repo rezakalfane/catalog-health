@@ -252,7 +252,7 @@ export function redactEnvironment(env) {
 
 const ANALYSIS_COLS = `
   a.id, a.environment_id, a.created_at, a.status, a.progress, a.summary,
-  a.error, a.warning,
+  a.error, a.warning, a.duration_ms, a.semantic_ms,
   EXISTS (SELECT 1 FROM analysis_products p WHERE p.analysis_id = a.id) AS has_rows
 `;
 
@@ -267,6 +267,8 @@ function toAnalysis(row, { withCatalog = false } = {}) {
     summary: parse(row.summary),
     error: row.error ?? null,
     warning: row.warning ?? null,
+    durationMs: row.duration_ms ?? null,
+    semanticMs: row.semantic_ms ?? null,
     hasRows: Boolean(row.has_rows),
   };
   if (withCatalog) analysis.catalog = parse(row.catalog);
@@ -409,6 +411,12 @@ export function updateAnalysis(analysisId, patch) {
     if (key in patch) {
       sets.push(`${key} = @${key}`);
       args[key] = patch[key] == null ? null : JSON.stringify(patch[key]);
+    }
+  }
+  for (const [key, col] of Object.entries({ durationMs: "duration_ms", semanticMs: "semantic_ms" })) {
+    if (key in patch) {
+      sets.push(`${col} = @${key}`);
+      args[key] = patch[key];
     }
   }
 

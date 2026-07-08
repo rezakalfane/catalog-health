@@ -173,6 +173,21 @@ button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem
 .dim-row .dim-fill { display: block; height: 100%; background: var(--signal); border-radius: 4px; transition: width 0.4s ease; }
 .dim-row .dim-val { width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.83rem; }
 
+/* Semantic "has LLM scoring" badge ----------------------------------------------- */
+.semantic-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--signal-soft);
+  color: var(--signal);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 /* Semantic verdict badges -------------------------------------------------------- */
 .verdict {
   display: inline-block;

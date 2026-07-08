@@ -3,6 +3,8 @@ import { listEnvironments, listCompletedAnalyses, redactEnvironment } from "@/li
 import { requireUser } from "@/lib/auth-helpers";
 import GradeLozenge from "@/components/GradeLozenge";
 import Sparkline from "@/components/Sparkline";
+import { formatDuration } from "@/lib/format";
+import SemanticBadge from "@/components/SemanticBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +84,7 @@ export default async function Dashboard() {
                 <th>Products</th>
                 <th>Score</th>
                 <th>Grade</th>
+                <th>Duration</th>
               </tr>
             </thead>
             <tbody>
@@ -93,6 +96,7 @@ export default async function Dashboard() {
                       <Link href={`/analyses/${a.id}`}>
                         {new Date(a.createdAt).toLocaleString()}
                       </Link>
+                      <SemanticBadge analysis={a} />
                     </td>
                     <td>
                       {env ? (
@@ -105,6 +109,9 @@ export default async function Dashboard() {
                     <td>{a.summary.overall}</td>
                     <td>
                       <GradeLozenge grade={a.summary.grade} small />
+                    </td>
+                    <td title={a.semanticMs != null ? `semantic ${formatDuration(a.semanticMs)}` : undefined}>
+                      {formatDuration(a.durationMs)}
                     </td>
                   </tr>
                 );

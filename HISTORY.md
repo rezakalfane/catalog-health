@@ -403,3 +403,26 @@ surface Ollama's own error message on non-OK responses (e.g. "this model
 requires a subscription, upgrade for access…") and to reserve the
 "is it running?" hint for actual connection failures (fetch throwing). Not a
 functional bug — a diagnosability fix.
+
+## 23. Per-analysis timing (total + semantic stage) — 2026-07-08
+
+> **Prompts:** Is it possible to know how long each analysis took? → Let's go
+> with separate semantic stage timing.
+
+**Summary:** The runner now records total wall-clock (`duration_ms`) and the
+semantic-stage share (`semantic_ms`, null when semantic is off), persisted via
+schema migration v5. Shown as "completed in 2m 14s (semantic 1m 50s)" in the
+analysis page header and a Duration column (semantic share on hover) in the
+environment history and dashboard recent-analyses tables. New analyses only;
+older ones show "—". `lib/format.js` holds the shared `formatDuration`.
+
+## 24. Semantic badge on analyses — 2026-07-08
+
+> **Prompt:** Can we mark analyses with semantic, with an icon or something?
+
+**Summary:** A small "✦ semantic" pill (`components/SemanticBadge.js`) marks
+analyses that included the LLM scoring pass, on the environment history table,
+the environment Latest-health card, the dashboard recent-analyses table, and
+the analysis page header. Detection keys off the presence of the semantic
+dimension in the summary, so degraded/cancelled runs (no semantic scores) are
+correctly left unmarked.

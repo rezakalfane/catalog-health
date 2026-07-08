@@ -82,6 +82,8 @@ export function startAnalysisRun({ userId, environment, demo, semantic }) {
 }
 
 async function execute(analysisId, { userId, environment, demo, semantic }) {
+  const startedAt = Date.now();
+  let semanticMs = null;
   const setProgress = (percent, stage, label, detail = null, extra = {}) =>
     updateAnalysis(analysisId, {
       progress: { percent: Math.min(99, Math.round(percent)), stage, label, detail },
@@ -133,6 +135,7 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
   // -- Stage 2b (optional): semantic pass (~64 -> ~78) -------------------------
   let semanticJudge = null; // label of the model that judged, for the report
   if (semantic) {
+    const semStart = Date.now();
     try {
       const judge = createJudge(demo ? { provider: "demo" } : getSettings(userId).llm);
       semanticJudge = judge.label;
@@ -159,6 +162,7 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
             : `Semantic scoring skipped: ${err.message}`,
       });
     }
+    semanticMs = Date.now() - semStart;
   }
 
   const summary = summarize(rows, categories);
@@ -207,6 +211,8 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
     rows, // full per-product results — served via /api/analyses/[id]/products
     catalog,
     error: null,
+    durationMs: Date.now() - startedAt,
+    semanticMs,
     progress: { percent: 100, stage: "done", label: "Analysis complete", detail: null },
   });
 }
