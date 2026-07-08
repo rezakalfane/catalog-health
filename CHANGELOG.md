@@ -7,12 +7,35 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/semantic-badge — 2026-07-08
+
+Two small features developed in one arc (entangled in the analysis/dashboard
+page files, so committed together). Merged into `main` (no-ff), branch deleted
+after merge; hashes backfilled next entry. HISTORY.md entries 23–24. (The
+`feat/analysis-duration` branch had no commits of its own — the timing work
+rode into this branch and is included here.)
+
+Highlights:
+
+- Per-analysis timing: total wall-clock + semantic-stage share, schema
+  migration v5 (`analyses.duration_ms`, `semantic_ms`), shown in the analysis
+  header and Duration columns.
+- "✦ semantic" badge marking analyses that included the LLM scoring pass,
+  across history/dashboard/latest-health/analysis-header.
+
+## fix/ollama-error-detail — 2026-07-07
+
+Surface Ollama's real error body (e.g. cloud-model subscription 403) instead
+of a misleading "is it running?"; reserve that hint for genuine connection
+failures. Commit `c9dde12`, merged into `main` as `4703287` (no-ff), branch
+deleted after merge. HISTORY.md entry 22.
+
 ## feat/semantic-detail — 2026-07-07
 
 Semantic review section on the product page (per-criterion verdict + reason),
-plus judge robustness hardening for local/proxied models. Merged into `main`
-(no-ff), branch deleted after merge; hashes backfilled next entry. HISTORY.md
-entry 21.
+plus judge robustness hardening for local/proxied models. Commit `dc11a8b`,
+merged into `main` as `1784f86` (no-ff), branch deleted after merge.
+HISTORY.md entry 21.
 
 Highlights:
 

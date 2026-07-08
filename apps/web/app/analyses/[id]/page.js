@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import AnalysisLiveReport from "@/components/AnalysisLiveReport";
+import { formatDuration } from "@/lib/format";
+import SemanticBadge from "@/components/SemanticBadge";
 
 export default function AnalysisPage() {
   const { id } = useParams();
@@ -40,10 +42,22 @@ export default function AnalysisPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>{status === "running" ? "Analysis in progress" : "Analysis"}</h1>
+          <h1>
+            {status === "running" ? "Analysis in progress" : "Analysis"}
+            {status === "done" && <SemanticBadge analysis={analysis} />}
+          </h1>
           <p className="muted">
             {envName || "…"}
             {analysis && <> · started {new Date(analysis.createdAt).toLocaleString()}</>}
+            {status === "done" && analysis?.durationMs != null && (
+              <>
+                {" "}
+                · completed in {formatDuration(analysis.durationMs)}
+                {analysis.semanticMs != null && (
+                  <> (semantic {formatDuration(analysis.semanticMs)})</>
+                )}
+              </>
+            )}
           </p>
         </div>
         {status === "running" && progress && (

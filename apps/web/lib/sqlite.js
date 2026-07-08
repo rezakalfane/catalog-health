@@ -107,6 +107,12 @@ const MIGRATIONS = [
   `
   ALTER TABLE analysis_products ADD COLUMN semantic TEXT; -- JSON
   `,
+
+  // 5 — run timing: total wall-clock and the (optional) semantic-stage share.
+  `
+  ALTER TABLE analyses ADD COLUMN duration_ms INTEGER;
+  ALTER TABLE analyses ADD COLUMN semantic_ms INTEGER;
+  `,
 ];
 
 function migrate(db) {

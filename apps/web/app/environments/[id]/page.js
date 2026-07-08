@@ -16,6 +16,8 @@ import AnalysisLiveReport from "@/components/AnalysisLiveReport";
 import ProductThumb from "@/components/ProductThumb";
 import InfoPopover from "@/components/InfoPopover";
 import { sectionInfo } from "@/components/section-info";
+import { formatDuration } from "@/lib/format";
+import SemanticBadge from "@/components/SemanticBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +70,7 @@ export default async function EnvironmentDetail({ params }) {
               <h2>
                 Latest health
                 <InfoPopover title="Latest health">{sectionInfo.latestHealth}</InfoPopover>
+                <SemanticBadge analysis={latest} />
               </h2>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                 <GradeLozenge grade={latest.summary.grade} />
@@ -218,6 +221,7 @@ export default async function EnvironmentDetail({ params }) {
                 <th>Products</th>
                 <th>Score</th>
                 <th>Grade</th>
+                <th>Duration</th>
               </tr>
             </thead>
             <tbody>
@@ -232,6 +236,7 @@ export default async function EnvironmentDetail({ params }) {
                   <td className="muted">—</td>
                   <td className="muted">—</td>
                   <td className="muted">—</td>
+                  <td className="muted">—</td>
                 </tr>
               )}
               {analyses.map((a) => (
@@ -240,11 +245,15 @@ export default async function EnvironmentDetail({ params }) {
                     <Link href={`/analyses/${a.id}`}>
                       {new Date(a.createdAt).toLocaleString()}
                     </Link>
+                    <SemanticBadge analysis={a} />
                   </td>
                   <td>{a.summary.productCount}</td>
                   <td>{a.summary.overall}</td>
                   <td>
                     <GradeLozenge grade={a.summary.grade} small />
+                  </td>
+                  <td title={a.semanticMs != null ? `semantic ${formatDuration(a.semanticMs)}` : undefined}>
+                    {formatDuration(a.durationMs)}
                   </td>
                 </tr>
               ))}
