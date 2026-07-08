@@ -100,6 +100,45 @@ the 5-dimension report with a warning.
 Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
 `packages/core/src/semantic.js`.
 
+## Issues detected
+
+Every product is flagged with named issues; they drive the "most common
+issues" table and the per-product drill-down (where each shows a fix hint).
+The full set, by dimension:
+
+| Dimension | Issue | What it flags |
+|---|---|---|
+| content | Missing description | No description at all. |
+| content | Thin description | Description under ~200 characters. |
+| content | No images | The product has no images. |
+| content | Only one image | Fewer than 2 images. |
+| content | Missing image alt text | Fewer than half the images have alt text. |
+| content | Weak title | Title too short, too long, or SKU-like (not human-readable). |
+| content | ALL-CAPS title | Title is written in all capitals. |
+| content | No brand assigned | No brand set on the product. |
+| structure | Fewer attributes than peers | Under half the custom fields its category peers typically have. |
+| structure | No custom fields | No structured attributes, and no peer baseline to compare against. |
+| structure | No GTIN / UPC / MPN | No product identifier of any kind. |
+| structure | Incomplete variant options | Some variants are missing option values. |
+| taxonomy | Not in any category | The product is orphaned — assigned to no category. |
+| taxonomy | Assigned to a missing category | References a category id that no longer exists. |
+| taxonomy | In too many categories | More than 5 categories **within a single channel tree**. |
+| hygiene | Zero price | Price is 0. |
+| hygiene | Sale price ≥ regular price | The "sale" price isn't actually lower. |
+| hygiene | Missing weight | No shipping weight set. |
+| hygiene | Visible but out of stock | Visible, inventory-tracked, and at zero stock. |
+| feed | Feed: no image | Fails the Google/AI-feed image requirement. |
+| feed | Feed: description too short | Under ~50 characters — fails the feed requirement. |
+| feed | Feed: no brand | Missing the feed's required brand attribute. |
+| feed | Feed: no identifier | Missing the feed's required GTIN/UPC/MPN. |
+| feed | Feed: no price | Missing a non-zero price for the feed. |
+| semantic | Doesn't say what it is | LLM judged the description doesn't make clear what the product is. |
+| semantic | Doesn't say who it's for | LLM judged it doesn't state the audience or use case. |
+| semantic | Lacks materials / specs | LLM judged it doesn't state materials, ingredients, or specs. |
+
+The three `semantic` issues appear only when semantic scoring is enabled.
+Labels and fix hints for each live in `apps/web/components/issue-info.js`.
+
 ## Data & security notes
 
 - Data persists to `data/catalog-health.sqlite` (better-sqlite3, WAL mode).
