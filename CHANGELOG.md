@@ -7,6 +7,22 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## refactor/central-api-client — 2026-07-09
+
+Refactoring exercise plus a small incidental fix, merged into `main` (no-ff),
+branch deleted after merge; merge hash backfilled next entry. HISTORY.md
+entries 25–26.
+
+Highlights:
+
+- All browser-side `fetch("/api/…")` calls centralized in a new
+  `apps/web/lib/api-client.js` (named function per endpoint, shared
+  `request()` helper, typed `ApiError` carrying status + body). Call sites
+  switched to try/catch; no behavior change. Commit `7d5d260`.
+- Suppress the benign VWO (`vwo-smartcode-listener`) hydration warning on
+  `<html>` via `suppressHydrationWarning` in `app/layout.js`. Commit
+  `38720b9`.
+
 ## feat/semantic-badge — 2026-07-08
 
 Two small features developed in one arc (entangled in the analysis/dashboard
