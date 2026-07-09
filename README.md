@@ -4,7 +4,7 @@ Internal tool for CSMs and merchandising strategists: analyze a BigCommerce
 store's catalog health and AI-readiness, track it over time, and get a
 prioritized fix list weighted by traffic and sales.
 
-![Catalog Health](./docs/images/catalog-health-00.png)
+![Catalog Health](./docs/images/catalog-health-00-v2.png)
 
 Monorepo with three parts:
 
