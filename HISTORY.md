@@ -427,3 +427,37 @@ the environment Latest-health card, the dashboard recent-analyses table, and
 the analysis page header. Detection keys off the presence of the semantic
 dimension in the summary, so degraded/cancelled runs (no semantic scores) are
 correctly left unmarked.
+
+## 25. Centralize API fetch calls in lib — 2026-07-09
+
+> **Prompt:** Refactoring exercise: all fetch API calls in pages should be
+> moved to central places in lib.
+
+**Summary:** Every browser-side `fetch("/api/…")` scattered across pages and
+components now goes through a single `apps/web/lib/api-client.js`. It exposes
+named functions per endpoint — settings (`getSettings`, `updateSettings`,
+`testSettingsConnection`), environments (`listEnvironments`, `getEnvironment`,
+`saveEnvironment`, `deleteEnvironment`), and analyses (`listAnalyses`,
+`getAnalysis`, `getAnalysisProducts`, `createAnalysis`, `skipSemantic`) — over
+a shared `request()` helper that parses JSON and throws a typed `ApiError`
+(carrying `status` and `body`) on non-2xx. Call sites switched to try/catch,
+reading `err.body?.error` for the same messages as before and `err.status`
+for the 409 "already running" redirect; `getEnvironment` swallows failures and
+returns null to preserve the silent behavior the analysis pages relied on.
+Refactored: `settings`, `analyses/new`, `environments`, `analyses/[id]`,
+`analyses/[id]/products`, `analyses/[id]/products/[productId]` pages plus the
+`RunAnalysisAction` and `AnalysisLiveReport` components. No behavior change;
+`next build` passes with type-checking.
+
+## 26. Silence VWO hydration warning — 2026-07-09
+
+> **Prompt:** [Screenshot of a React hydration error: `vwo-smartcode-listener`
+> attribute on `<html>` didn't match between server and client.]
+
+**Summary:** VWO (Visual Website Optimizer — extension or injected snippet)
+adds `vwo-smartcode-listener="true"` to `<html>` before React hydrates, so the
+server HTML and client differ on that one attribute. Added
+`suppressHydrationWarning` to the `<html>` element in `app/layout.js`; it
+suppresses only that element's own attribute/text mismatch (does not cascade
+to children, so real hydration bugs elsewhere still surface). Not caused by
+the app's own rendering.

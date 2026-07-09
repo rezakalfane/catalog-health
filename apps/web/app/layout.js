@@ -11,7 +11,10 @@ export const metadata = {
 export default async function RootLayout({ children }) {
   const session = await auth();
   return (
-    <html lang="en">
+    // VWO (and similar third-party scripts/extensions) inject attributes like
+    // `vwo-smartcode-listener` onto <html> before React hydrates; suppress the
+    // benign attribute-only hydration warning that causes.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

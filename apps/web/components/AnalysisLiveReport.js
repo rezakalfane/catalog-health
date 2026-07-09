@@ -7,6 +7,7 @@ import DimensionBars from "@/components/DimensionBars";
 import ProductThumb from "@/components/ProductThumb";
 import InfoPopover from "@/components/InfoPopover";
 import { sectionInfo } from "@/components/section-info";
+import { getAnalysis } from "@/lib/api-client";
 
 function Skeleton({ width = "100%", height = "0.9rem", style }) {
   return <div className="skeleton" style={{ width, height, ...style }} aria-hidden="true" />;
@@ -36,13 +37,14 @@ export default function AnalysisLiveReport({ analysisId, onAnalysis }) {
     let timer;
     let cancelled = false;
     async function poll() {
-      const res = await fetch(`/api/analyses/${analysisId}`);
-      if (cancelled) return;
-      if (!res.ok) {
-        setMissing(true);
+      let a;
+      try {
+        a = await getAnalysis(analysisId);
+      } catch {
+        if (!cancelled) setMissing(true);
         return;
       }
-      const a = await res.json();
+      if (cancelled) return;
       setAnalysis(a);
       onAnalysis?.(a);
       if ((a.status || "done") === "running") timer = setTimeout(poll, 1000);

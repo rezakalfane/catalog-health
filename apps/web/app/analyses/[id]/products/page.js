@@ -6,6 +6,7 @@ import Link from "next/link";
 import GradeLozenge from "@/components/GradeLozenge";
 import ProductThumb from "@/components/ProductThumb";
 import { issueLabel } from "@/components/issue-info";
+import { getAnalysisProducts } from "@/lib/api-client";
 
 const PAGE_SIZE = 50;
 const GRADES = ["A", "B", "C", "D", "F"];
@@ -47,13 +48,9 @@ export default function ProductTablePage() {
   }
 
   useEffect(() => {
-    fetch(`/api/analyses/${id}/products`)
-      .then(async (r) => {
-        const body = await r.json();
-        if (!r.ok) throw new Error(body.error || "Could not load products");
-        setData(body);
-      })
-      .catch((err) => setError(err.message));
+    getAnalysisProducts(id)
+      .then(setData)
+      .catch((err) => setError(err.body?.error || "Could not load products"));
   }, [id]);
 
   // Distinct issues and categories present in this analysis, for the dropdowns.
