@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { listEnvironments, saveEnvironment, deleteEnvironment } from "@/lib/api-client";
 
 const EMPTY = { name: "", storeHash: "", accessToken: "" };
 
@@ -12,8 +13,7 @@ export default function EnvironmentsPage() {
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    const res = await fetch("/api/environments");
-    setEnvironments(await res.json());
+    setEnvironments(await listEnvironments());
   }
   useEffect(() => {
     refresh();
@@ -35,25 +35,21 @@ export default function EnvironmentsPage() {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const url = editingId ? `/api/environments/${editingId}` : "/api/environments";
-    const res = await fetch(url, {
-      method: editingId ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setError(body.error || "Save failed");
+    try {
+      await saveEnvironment(editingId, form);
+    } catch (err) {
+      setBusy(false);
+      setError(err.body?.error || "Save failed");
       return;
     }
+    setBusy(false);
     cancelEdit();
     refresh();
   }
 
   async function remove(env) {
     if (!confirm(`Remove "${env.name}" and its analysis history?`)) return;
-    await fetch(`/api/environments/${env.id}`, { method: "DELETE" });
+    await deleteEnvironment(env.id).catch(() => {});
     refresh();
   }
 

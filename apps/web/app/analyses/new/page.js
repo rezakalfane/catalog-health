@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { listEnvironments, getSettings, createAnalysis } from "@/lib/api-client";
 
 function NewAnalysisForm() {
   const router = useRouter();
@@ -15,43 +16,34 @@ function NewAnalysisForm() {
   const [semantic, setSemantic] = useState(true);
 
   useEffect(() => {
-    fetch("/api/environments")
-      .then((r) => r.json())
-      .then((envs) => {
-        setEnvironments(envs);
-        if (!envs.length) return;
-        const preselected = envs.find((env) => env.id === preselectedEnv);
-        setSelected(preselected ? preselected.id : envs[0].id);
-      });
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then(({ llm }) => setLlm(llm));
+    listEnvironments().then((envs) => {
+      setEnvironments(envs);
+      if (!envs.length) return;
+      const preselected = envs.find((env) => env.id === preselectedEnv);
+      setSelected(preselected ? preselected.id : envs[0].id);
+    });
+    getSettings().then(({ llm }) => setLlm(llm));
   }, [preselectedEnv]);
 
   async function run(demo = false) {
     setRunning(true);
     setError("");
-    const res = await fetch("/api/analyses", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(
+    try {
+      const body = await createAnalysis(
         demo
           ? { demo: true, semantic }
           : { environmentId: selected, semantic: semantic && Boolean(llm?.configured) }
-      ),
-    });
-    const body = await res.json().catch(() => ({}));
-    if (res.status === 409 && body.analysisId) {
-      // Already running — take the user to the run in progress.
-      router.push(`/analyses/${body.analysisId}`);
-      return;
-    }
-    if (!res.ok) {
+      );
+      router.push(`/analyses/${body.id}`);
+    } catch (err) {
+      if (err.status === 409 && err.body?.analysisId) {
+        // Already running — take the user to the run in progress.
+        router.push(`/analyses/${err.body.analysisId}`);
+        return;
+      }
       setRunning(false);
-      setError(body.error || "Could not start the analysis");
-      return;
+      setError(err.body?.error || "Could not start the analysis");
     }
-    router.push(`/analyses/${body.id}`);
   }
 
   return (

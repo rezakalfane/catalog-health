@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getSettings, updateSettings, testSettingsConnection } from "@/lib/api-client";
 
 const PROVIDERS = [
   { id: "anthropic", label: "Anthropic (Claude)" },
@@ -22,60 +23,48 @@ export default function SettingsPage() {
   const [status, setStatus] = useState(null); // { kind: "ok"|"error", text }
 
   useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then(({ llm }) => {
-        setLlm(llm);
-        setProvider(llm.provider || "anthropic");
-        setBaseUrl(llm.baseUrl || "");
-        setModel(llm.model || "");
-        if (llm.model) setModels([llm.model]);
-      });
+    getSettings().then(({ llm }) => {
+      setLlm(llm);
+      setProvider(llm.provider || "anthropic");
+      setBaseUrl(llm.baseUrl || "");
+      setModel(llm.model || "");
+      if (llm.model) setModels([llm.model]);
+    });
   }, []);
 
   async function testConnection() {
     setTesting(true);
     setStatus(null);
-    const res = await fetch("/api/settings/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ provider, apiKey: apiKey || undefined, baseUrl: baseUrl || undefined }),
-    });
-    const body = await res.json().catch(() => ({}));
-    setTesting(false);
-    if (!res.ok) {
-      setStatus({ kind: "error", text: body.error || "Connection failed" });
-      return;
+    try {
+      const body = await testSettingsConnection({ provider, apiKey, baseUrl });
+      setModels(body.models);
+      if (!body.models.includes(model)) setModel(body.models[0]);
+      setStatus({ kind: "ok", text: `Connected — ${body.models.length} models available` });
+    } catch (err) {
+      setStatus({ kind: "error", text: err.body?.error || "Connection failed" });
+    } finally {
+      setTesting(false);
     }
-    setModels(body.models);
-    if (!body.models.includes(model)) setModel(body.models[0]);
-    setStatus({ kind: "ok", text: `Connected — ${body.models.length} models available` });
   }
 
   async function saveSettings() {
     setSaving(true);
     setStatus(null);
-    const res = await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        llm: { provider, model, apiKey: apiKey || undefined, baseUrl: baseUrl || undefined },
-      }),
-    });
-    const body = await res.json().catch(() => ({}));
-    setSaving(false);
-    if (!res.ok) {
+    try {
+      const body = await updateSettings({ provider, model, apiKey, baseUrl });
+      setLlm(body.llm);
+      setApiKey("");
+      setStatus({
+        kind: "ok",
+        text: body.llm.configured
+          ? "Saved — semantic scoring is available on new analyses"
+          : "Saved, but not fully configured yet",
+      });
+    } catch {
       setStatus({ kind: "error", text: "Could not save settings" });
-      return;
+    } finally {
+      setSaving(false);
     }
-    setLlm(body.llm);
-    setApiKey("");
-    setStatus({
-      kind: "ok",
-      text: body.llm.configured
-        ? "Saved — semantic scoring is available on new analyses"
-        : "Saved, but not fully configured yet",
-    });
   }
 
   if (!llm) return <p className="muted">Loading…</p>;

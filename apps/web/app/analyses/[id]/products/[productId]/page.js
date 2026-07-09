@@ -7,6 +7,7 @@ import GradeLozenge from "@/components/GradeLozenge";
 import DimensionBars from "@/components/DimensionBars";
 import { ISSUE_INFO, issueLabel } from "@/components/issue-info";
 import { dimensionInfo } from "@/components/dimension-info";
+import { getAnalysisProducts, getEnvironment } from "@/lib/api-client";
 
 // The three questions the semantic judge answers, in display order.
 const SEMANTIC_CRITERIA = [
@@ -23,22 +24,16 @@ export default function ProductDrilldownPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`/api/analyses/${id}/products`)
-      .then(async (r) => {
-        const body = await r.json();
-        if (!r.ok) throw new Error(body.error || "Could not load product");
-        setData(body);
-      })
-      .catch((err) => setError(err.message));
+    getAnalysisProducts(id)
+      .then(setData)
+      .catch((err) => setError(err.body?.error || "Could not load product"));
   }, [id]);
 
   // Store hash for the deep link into the BigCommerce control panel.
   const environmentId = data?.environmentId;
   useEffect(() => {
     if (!environmentId || environmentId === "demo") return;
-    fetch(`/api/environments/${environmentId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((env) => env?.storeHash && setStoreHash(env.storeHash));
+    getEnvironment(environmentId).then((env) => env?.storeHash && setStoreHash(env.storeHash));
   }, [environmentId]);
 
   const row = data?.rows.find((r) => String(r.id) === String(productId));

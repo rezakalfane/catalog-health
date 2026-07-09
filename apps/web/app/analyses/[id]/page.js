@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import AnalysisLiveReport from "@/components/AnalysisLiveReport";
 import { formatDuration } from "@/lib/format";
+import { getEnvironment, skipSemantic } from "@/lib/api-client";
 import SemanticBadge from "@/components/SemanticBadge";
 
 export default function AnalysisPage() {
@@ -18,7 +19,7 @@ export default function AnalysisPage() {
     setCancellingSemantic(true);
     // The runner aborts between judge chunks; the next polls show the jump
     // to the summarize stage and the "cancelled" note on the report.
-    await fetch(`/api/analyses/${id}/skip-semantic`, { method: "POST" }).catch(() => {});
+    await skipSemantic(id).catch(() => {});
   }
 
   const environmentId = analysis?.environmentId;
@@ -28,9 +29,7 @@ export default function AnalysisPage() {
       setEnvName("Demo catalog");
       return;
     }
-    fetch(`/api/environments/${environmentId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((env) => env && setEnvName(env.name));
+    getEnvironment(environmentId).then((env) => env && setEnvName(env.name));
   }, [environmentId]);
 
   const status = analysis ? analysis.status || "done" : "loading";
