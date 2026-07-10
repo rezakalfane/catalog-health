@@ -16,6 +16,10 @@ const CHUNK_SIZE = 10;
 const CONCURRENCY = 4;
 const MAX_DESC_CHARS = 2000;
 const MIN_JUDGEABLE_CHARS = 20;
+const OPENAI_CONCURRENCY = Number(process.env.OPENAI_JUDGE_CONCURRENCY || 1);
+const OPENAI_MIN_DELAY_MS = Number(process.env.OPENAI_JUDGE_MIN_DELAY_MS || 500);
+const OPENAI_MAX_RETRIES = 5;
+const OPENAI_MIN_RATE_LIMIT_WAIT_MS = 500;
 
 const VERDICT_VALUES = ["yes", "partial", "no"];
 const ALLOWED_OLLAMA_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
@@ -181,39 +185,91 @@ function anthropicJudge({ apiKey, model }) {
 }
 
 function openaiJudge({ apiKey, model }) {
-  return async function judgeChunk(products) {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        // Generous: on reasoning models (o-series, gpt-5) this cap includes
-        // the invisible reasoning tokens, not just the JSON verdicts.
-        max_completion_tokens: 8000,
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: "verdicts", strict: true, schema: VERDICTS_SCHEMA },
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  let responseFormatMode = "json_schema";
+
+  function retryDelayMs(res, message, attempt) {
+    const retryAfterMs = Number(res.headers.get("retry-after-ms"));
+    if (Number.isFinite(retryAfterMs) && retryAfterMs > 0) {
+      return Math.max(retryAfterMs, OPENAI_MIN_RATE_LIMIT_WAIT_MS);
+    }
+    const retryAfter = Number(res.headers.get("retry-after"));
+    if (Number.isFinite(retryAfter) && retryAfter > 0) {
+      return Math.max(retryAfter * 1000, OPENAI_MIN_RATE_LIMIT_WAIT_MS);
+    }
+    const match = String(message || "").match(/try again in\s+(\d+(?:\.\d+)?)\s*(ms|s)/i);
+    if (match) {
+      const n = Number(match[1]);
+      const delay = match[2].toLowerCase() === "s" ? n * 1000 : n;
+      return Math.max(delay, OPENAI_MIN_RATE_LIMIT_WAIT_MS);
+    }
+    return Math.min(1000 * 2 ** attempt, 8000);
+  }
+
+  async function createCompletion(products, responseFormat) {
+    const requestBody = {
+      model,
+      // Generous: on reasoning models (o-series, gpt-5) this cap includes
+      // the invisible reasoning tokens, not just the JSON verdicts.
+      max_completion_tokens: 8000,
+      messages: [
+        { role: "system", content: JUDGE_SYSTEM },
+        { role: "user", content: chunkPayload(products) },
+      ],
+    };
+    if (responseFormat) requestBody.response_format = responseFormat;
+
+    for (let attempt = 0; attempt <= OPENAI_MAX_RETRIES; attempt++) {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
-        messages: [
-          { role: "system", content: JUDGE_SYSTEM },
-          { role: "user", content: chunkPayload(products) },
-        ],
-      }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.error?.message || `OpenAI returned ${res.status}`);
+        body: JSON.stringify(requestBody),
+      });
+      if (res.ok) return res.json();
+
+      const errorBody = await res.json().catch(() => ({}));
+      const message = errorBody.error?.message || `OpenAI returned ${res.status}`;
+      const code = errorBody.error?.code || errorBody.error?.param || "";
+      if (res.status === 429 && attempt < OPENAI_MAX_RETRIES) {
+        await sleep(retryDelayMs(res, message, attempt));
+        continue;
+      }
+      throw Object.assign(new Error(message), { status: res.status, code });
     }
-    const data = await res.json();
-    const message = data.choices?.[0]?.message;
-    if (message?.refusal) throw new Error("The model declined to judge this batch");
-    if (data.choices?.[0]?.finish_reason === "length") {
-      throw new Error("Judge response was truncated (max tokens)");
+  }
+
+  return async function judgeChunk(products) {
+    const schemaFormat = {
+      type: "json_schema",
+      json_schema: { name: "verdicts", strict: true, schema: VERDICTS_SCHEMA },
+    };
+    const attempts = {
+      json_schema: [schemaFormat, { type: "json_object" }, null],
+      json_object: [{ type: "json_object" }, null],
+      none: [null],
+    };
+    let lastErr;
+    for (const responseFormat of attempts[responseFormatMode]) {
+      try {
+        const data = await createCompletion(products, responseFormat);
+        responseFormatMode = responseFormat?.type || "none";
+        const message = data.choices?.[0]?.message;
+        if (message?.refusal) throw new Error("The model declined to judge this batch");
+        if (data.choices?.[0]?.finish_reason === "length") {
+          throw new Error("Judge response was truncated (max tokens)");
+        }
+        return sanitizeVerdicts(parseJsonLoose(message?.content || "{}"), new Set(products.map((p) => p.id)));
+      } catch (err) {
+        lastErr = err;
+        if (err.status !== 400 || !/response_format|json_schema|json_object|structured outputs|JSON mode/i.test(err.message)) {
+          throw err;
+        }
+      }
     }
-    return sanitizeVerdicts(parseJsonLoose(message?.content || "{}"), new Set(products.map((p) => p.id)));
+    throw lastErr;
   };
 }
 
@@ -322,6 +378,8 @@ export function createJudge(settings = {}) {
     return {
       judgeChunk: openaiJudge({ apiKey, model: settings.model }),
       label: `${settings.model} (OpenAI)`,
+      concurrency: Math.max(1, OPENAI_CONCURRENCY),
+      minDelayMs: Math.max(0, OPENAI_MIN_DELAY_MS),
     };
   }
   const apiKey = settings.apiKey || process.env.ANTHROPIC_API_KEY;
@@ -339,7 +397,10 @@ export function createJudge(settings = {}) {
  * A truthy shouldAbort() stops the pass between chunks with a
  * `semantic_cancelled` error.
  */
-export async function judgeCatalog(products, { judgeChunk, onProgress, shouldAbort } = {}) {
+export async function judgeCatalog(
+  products,
+  { judgeChunk, onProgress, shouldAbort, concurrency = CONCURRENCY, minDelayMs = 0 } = {}
+) {
   const judgeable = products.filter(
     (p) => stripHtml(p.description).length >= MIN_JUDGEABLE_CHARS
   );
@@ -358,12 +419,29 @@ export async function judgeCatalog(products, { judgeChunk, onProgress, shouldAbo
   let judged = 0;
   let nextChunk = 0;
   let failures = 0;
+  let lastRequestAt = 0;
+  let throttle = Promise.resolve();
+
+  async function waitForTurn() {
+    if (!minDelayMs) return;
+    const previous = throttle;
+    let release;
+    throttle = new Promise((resolve) => {
+      release = resolve;
+    });
+    await previous;
+    const wait = lastRequestAt + minDelayMs - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastRequestAt = Date.now();
+    release();
+  }
 
   async function worker() {
     while (nextChunk < chunks.length) {
       abort();
       const chunk = chunks[nextChunk++];
       try {
+        await waitForTurn();
         for (const v of await judgeChunk(chunk)) verdicts.set(v.id, v);
       } catch (err) {
         // Tolerate a few bad chunks (their products get retried below, and
@@ -377,7 +455,7 @@ export async function judgeCatalog(products, { judgeChunk, onProgress, shouldAbo
   }
 
   await Promise.all(
-    Array.from({ length: Math.min(CONCURRENCY, chunks.length) }, worker)
+    Array.from({ length: Math.min(concurrency, chunks.length) }, worker)
   );
 
   // Retry pass: models (especially smaller/local ones) sometimes omit some
@@ -391,6 +469,7 @@ export async function judgeCatalog(products, { judgeChunk, onProgress, shouldAbo
         abort();
         const p = missing[nextRetry++];
         try {
+          await waitForTurn();
           for (const v of await judgeChunk([p])) verdicts.set(v.id, v);
         } catch {
           // leave unjudged — the product shows an honest "no result" note
@@ -399,7 +478,7 @@ export async function judgeCatalog(products, { judgeChunk, onProgress, shouldAbo
       }
     }
     await Promise.all(
-      Array.from({ length: Math.min(CONCURRENCY, missing.length) }, retryWorker)
+      Array.from({ length: Math.min(concurrency, missing.length) }, retryWorker)
     );
   }
 
