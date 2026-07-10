@@ -67,8 +67,8 @@ npm run dev
   impact-weighted top-fix list.
 - **Product table & drill-down** — every analysis stores its full per-product
   results: browse them with filters (search, grade, issue, category, sort),
-  and open any product for its dimension scores, issues with fix hints,
-  traffic and impact.
+  export the filtered/sorted list as an Excel-friendly CSV, and open any
+  product for its dimension scores, issues with fix hints, traffic and impact.
 - **Settings** — connect an LLM for the optional semantic scoring pass:
   Anthropic (Claude, default `claude-opus-4-8`), OpenAI, or Ollama (local
   models, free, data never leaves the machine). API keys are stored
@@ -187,7 +187,8 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
 - [x] Per-product drill-down page and full product table with filters
       (`/analyses/[id]/products`; per-product rows persist with each new
       analysis — older analyses predating this have summary only)
-- [ ] CSV / PDF export from the web app
+- [x] CSV export from the web app (filtered/sorted product list)
+- [ ] PDF export from the web app
 - [ ] Compare two analyses (what improved / regressed)
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)

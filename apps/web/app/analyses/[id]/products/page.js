@@ -23,6 +23,59 @@ const COLUMNS = [
   { key: "issues", label: "Issues", cmp: (a, b) => a.issues.length - b.issues.length, dir: "desc" },
 ];
 
+const CSV_HEADERS = [
+  "Product ID",
+  "Product",
+  "SKU",
+  "Score",
+  "Grade",
+  "Impact",
+  "Views",
+  "Sold",
+  "Issue count",
+  "Issues",
+];
+
+function csvCell(value) {
+  const text = value == null ? "" : String(value);
+  const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replaceAll('"', '""')}"`;
+}
+
+function csvRows(rows) {
+  return [
+    CSV_HEADERS.map(csvCell).join(","),
+    ...rows.map((r) =>
+      [
+        r.id,
+        r.name || `#${r.id}`,
+        r.sku,
+        r.overall,
+        r.grade,
+        r.impact,
+        r.viewCount,
+        r.totalSold,
+        r.issues.length,
+        r.issues.map(issueLabel).join("; "),
+      ]
+        .map(csvCell)
+        .join(",")
+    ),
+  ].join("\r\n");
+}
+
+function downloadCsv(filename, rows) {
+  const blob = new Blob([`\uFEFF${csvRows(rows)}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function ProductTablePage() {
   const { id } = useParams();
   const [data, setData] = useState(null);
@@ -98,6 +151,12 @@ export default function ProductTablePage() {
     };
   }
 
+  function exportCsv() {
+    if (!data) return;
+    const date = data.createdAt ? data.createdAt.slice(0, 10) : "analysis";
+    downloadCsv(`catalog-health-products-${date}-${id}.csv`, filtered);
+  }
+
   if (error) {
     return (
       <>
@@ -136,6 +195,9 @@ export default function ProductTablePage() {
             )}
           </p>
         </div>
+        <button type="button" className="secondary" onClick={exportCsv} disabled={!data}>
+          Export as CSV
+        </button>
       </div>
 
       <div className="card">

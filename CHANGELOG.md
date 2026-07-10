@@ -7,6 +7,22 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## product-csv-export — 2026-07-10
+
+Excel-friendly CSV export for analysis product lists. Developed on
+`product-csv-export`, merged into `main` (no-ff); merge hash backfilled next
+entry. HISTORY.md entry 28.
+
+Highlights:
+
+- Added an "Export as CSV" button to `/analyses/[id]/products` that exports
+  all rows matching the current filters and sort, not just the visible page.
+- CSV includes product id, product name, SKU, score, grade, impact, views,
+  units sold, issue count, and a semicolon-separated list of human-readable
+  issue labels.
+- Output uses Excel-friendly CSV details: UTF-8 BOM, CRLF line endings,
+  quoted cells, and basic formula-injection protection.
+
 ## review-hardening-fixes — 2026-07-10
 
 Security/reliability fixes from a code review. Developed on
