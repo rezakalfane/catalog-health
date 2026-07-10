@@ -7,6 +7,7 @@ import GradeLozenge from "@/components/GradeLozenge";
 import ProductThumb from "@/components/ProductThumb";
 import { issueLabel } from "@/components/issue-info";
 import { compareAnalyses } from "@/lib/api-client";
+import ActionIcon from "@/components/ActionIcon";
 
 function Delta({ value, lowerIsBetter = false }) {
   const n = Number(value || 0);
@@ -65,6 +66,7 @@ function ComparePageInner() {
         <div className="card">
           <p className="error">{error}</p>
           <Link className="btn" href="/">
+            <ActionIcon name="arrowLeft" />
             Back to dashboard
           </Link>
         </div>
@@ -97,6 +99,7 @@ function ComparePageInner() {
           </p>
         </div>
         <Link className="btn" href={`/analyses/${data.target.id}`}>
+          <ActionIcon name="arrowLeft" />
           Back to current analysis
         </Link>
       </div>

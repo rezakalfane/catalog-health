@@ -140,11 +140,20 @@ button, .btn {
   cursor: pointer;
   background: var(--signal);
   color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
 }
-button:hover, .btn:hover { filter: brightness(1.08); }
+button:hover, .btn:hover { filter: brightness(1.08); text-decoration: none; }
 button:disabled { opacity: 0.5; cursor: default; }
-button.secondary { background: var(--signal-soft); color: var(--signal); }
+button.secondary, .btn.secondary { background: var(--signal-soft); color: var(--signal); }
 button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem 0.5rem; }
+.action-icon {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+}
 
 /* Grade lozenge — the signature element ------------------------------------- */
 .lozenge {
@@ -382,6 +391,16 @@ a.progress-link:hover .progress-top { color: var(--signal); }
 .muted { color: var(--ink-soft); font-size: 0.88rem; }
 .error { color: var(--grade-f); font-size: 0.9rem; }
 .page-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
+.page-head .btn,
+.page-head button {
+  padding: 0.42rem 0.72rem;
+  font-size: 0.86rem;
+  border-radius: 6px;
+}
+.page-head .action-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

@@ -7,6 +7,7 @@ import AnalysisLiveReport from "@/components/AnalysisLiveReport";
 import { formatDuration } from "@/lib/format";
 import { getEnvironment, listAnalyses, skipSemantic } from "@/lib/api-client";
 import SemanticBadge from "@/components/SemanticBadge";
+import ActionIcon from "@/components/ActionIcon";
 
 export default function AnalysisPage() {
   const { id } = useParams();
@@ -108,15 +109,18 @@ export default function AnalysisPage() {
                 className="btn secondary"
                 href={`/analyses/compare?base=${previousAnalysisId}&target=${id}`}
               >
+                <ActionIcon name="compare" />
                 Compare with previous
               </Link>
             )}
             {analysis.hasRows && (
               <Link className="btn secondary" href={`/analyses/${id}/products`}>
+                <ActionIcon name="table" />
                 All products
               </Link>
             )}
             <Link className="btn" href={envHref}>
+              <ActionIcon name={isDemo ? "arrowLeft" : "store"} />
               {isDemo ? "Back to dashboard" : "View environment"}
             </Link>
           </div>
