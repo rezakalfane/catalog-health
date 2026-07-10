@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { DEFAULT_OLLAMA_BASE_URL } from "@catalog-health/core";
+import { normalizeOllamaBaseUrl } from "@catalog-health/core";
 import { getSettings, envKeyFor } from "@/lib/db";
 import { getApiUser } from "@/lib/auth-helpers";
 
@@ -22,7 +22,7 @@ export async function POST(request) {
 
   try {
     if (provider === "ollama") {
-      const base = (body.baseUrl || stored.baseUrl || DEFAULT_OLLAMA_BASE_URL).replace(/\/$/, "");
+      const base = normalizeOllamaBaseUrl(body.baseUrl || stored.baseUrl);
       const res = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(5000) });
       if (!res.ok) throw new Error(`Ollama returned ${res.status}`);
       const data = await res.json();
@@ -69,6 +69,7 @@ export async function POST(request) {
     } else if (err.status === 401) {
       message = "Invalid API key";
     }
-    return NextResponse.json({ error: message }, { status: 502 });
+    const status = provider === "ollama" && message.startsWith("Ollama URL") ? 400 : 502;
+    return NextResponse.json({ error: message }, { status });
   }
 }

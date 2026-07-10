@@ -461,3 +461,26 @@ server HTML and client differ on that one attribute. Added
 suppresses only that element's own attribute/text mismatch (does not cascade
 to children, so real hydration bugs elsewhere still surface). Not caused by
 the app's own rendering.
+
+## 27. Code review hardening fixes — 2026-07-10
+
+> **Prompts:** Can you do a code review of my project? → Can you fix 1, 2 and
+> 3 in order, one by one? → Can you update CHANGELOG.md, HISTORY.md, create a
+> branch, commit and merge into main?
+
+**Summary:** Addressed the three concrete review findings in order:
+
+- Fixed the encryption-at-rest migration for LLM settings: `secureDb()` now
+  sweeps every `settings.llm` row and updates it by `(user_id, key)`, so
+  enabling `APP_ENCRYPTION_KEY` after multiple users exist does not overwrite
+  all users' settings with one row.
+- Added a shared `normalizeOllamaBaseUrl()` guard and used it in the settings
+  save route, connection-test route, and semantic runner. Ollama is now limited
+  to local HTTP endpoints (`localhost`, `127.0.0.1`, `[::1]`) with no
+  credentials, query, or fragment.
+- Added a 30-second timeout around each BigCommerce API request, returning a
+  clear path-specific timeout error so analyses fail cleanly instead of
+  remaining stuck in `running`.
+
+Verified with a production `next build` and a small Node check for allowed /
+blocked Ollama URL forms.
