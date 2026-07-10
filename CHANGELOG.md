@@ -7,6 +7,24 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## openai-judge-throttling — 2026-07-10
+
+OpenAI semantic-judge robustness for model compatibility and rate limits.
+Developed on `openai-judge-throttling`, merged into `main` (no-ff); merge hash
+backfilled next entry. HISTORY.md entry 30.
+
+Highlights:
+
+- OpenAI judge now falls back from strict `response_format: json_schema` to
+  JSON-object mode, then prompt-only JSON parsing, when the selected model
+  does not support Structured Outputs.
+- Added transient 429 retry handling using `retry-after-ms`, `retry-after`, or
+  OpenAI's "try again in Xms" message, with a minimum wait to avoid retry
+  churn.
+- Added proactive OpenAI throttling: default one semantic chunk at a time with
+  at least 500ms between requests. Overrides documented via
+  `OPENAI_JUDGE_CONCURRENCY` and `OPENAI_JUDGE_MIN_DELAY_MS`.
+
 ## analysis-comparison — 2026-07-10
 
 Analysis comparison workflow for completed runs from the same environment.

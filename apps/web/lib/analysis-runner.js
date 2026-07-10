@@ -142,6 +142,8 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
       setProgress(64, "semantic", "Judging descriptions…", judge.label);
       const verdicts = await judgeCatalog(products, {
         judgeChunk: judge.judgeChunk,
+        concurrency: judge.concurrency,
+        minDelayMs: judge.minDelayMs,
         shouldAbort: () => skipSemanticRequests.has(analysisId),
         onProgress: ({ judged, total }) =>
           setProgress(

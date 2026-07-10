@@ -533,3 +533,33 @@ the same environment.
   awkward wrapping, and resolved/new issue columns are more compact.
 
 Each phase was checked with `npm run build`; the final build passed.
+
+## 30. OpenAI semantic judge compatibility and throttling — 2026-07-10
+
+> **Prompts:** Got the following error with OpenAI judge:
+> `response_format` of type `json_schema` is not supported with this model →
+> Got an issue with rate limit: `Rate limit reached ... RPM` → Error:
+> `Cannot access 'body' before initialization` → looks stuck even if logs show
+> polling → Should we also throttle the API calls based on rate limits in the
+> documentation? → Ok → all good you can update documentation, create branch,
+> commit and merge into main.
+
+**Summary:** Hardened the OpenAI semantic judge path.
+
+- Model compatibility: OpenAI still tries strict Structured Outputs first, but
+  if the selected model rejects `response_format: json_schema`, it falls back
+  to JSON-object mode and then to prompt-only JSON parsing using the existing
+  `parseJsonLoose()` sanitizer.
+- Rate limits: transient 429 responses now retry the same chunk, respecting
+  `retry-after-ms`, `retry-after`, or OpenAI's "try again in Xms" response
+  text, with a 500ms minimum wait to avoid rapid retry churn.
+- Fixed the retry-path runtime bug caused by shadowing the request payload
+  variable (`body`) with an error-response variable.
+- Proactive throttle: OpenAI semantic scoring now defaults to one request
+  worker and at least 500ms between chunk requests, while Anthropic/Ollama/demo
+  keep the existing concurrency. The runner passes provider throttle settings
+  through to `judgeCatalog()`.
+- Documentation: README and `.env.example` document
+  `OPENAI_JUDGE_CONCURRENCY` and `OPENAI_JUDGE_MIN_DELAY_MS`.
+
+Verified with `npm run build`.

@@ -103,6 +103,12 @@ Configure the provider/model under **Settings**; enable per-run on the New
 Analysis page. If the pass fails mid-run the analysis degrades gracefully to
 the 5-dimension report with a warning.
 
+OpenAI semantic judging is throttled proactively to avoid request-per-minute
+bursts: by default it runs one chunk at a time with at least 500ms between
+requests, and still retries transient 429 rate-limit responses. Override with
+`OPENAI_JUDGE_CONCURRENCY` and `OPENAI_JUDGE_MIN_DELAY_MS` if your account has
+higher limits.
+
 Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
 `packages/core/src/semantic.js`.
 
