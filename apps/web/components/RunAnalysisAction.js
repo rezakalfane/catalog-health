@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { listAnalyses } from "@/lib/api-client";
+import ActionIcon from "@/components/ActionIcon";
 
 /**
  * "Run new analysis" button that turns into a live progress bar (linking to
@@ -60,6 +61,7 @@ export default function RunAnalysisAction({ environmentId }) {
 
   return (
     <Link className="btn" href={`/analyses/new?env=${environmentId}`}>
+      <ActionIcon name="play" />
       Run new analysis
     </Link>
   );

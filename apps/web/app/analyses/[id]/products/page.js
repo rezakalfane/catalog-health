@@ -7,6 +7,7 @@ import GradeLozenge from "@/components/GradeLozenge";
 import ProductThumb from "@/components/ProductThumb";
 import { issueLabel } from "@/components/issue-info";
 import { getAnalysisProducts } from "@/lib/api-client";
+import ActionIcon from "@/components/ActionIcon";
 
 const PAGE_SIZE = 50;
 const GRADES = ["A", "B", "C", "D", "F"];
@@ -196,6 +197,7 @@ export default function ProductTablePage() {
           </p>
         </div>
         <button type="button" className="secondary" onClick={exportCsv} disabled={!data}>
+          <ActionIcon name="download" />
           Export as CSV
         </button>
       </div>

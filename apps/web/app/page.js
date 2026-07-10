@@ -5,6 +5,7 @@ import GradeLozenge from "@/components/GradeLozenge";
 import Sparkline from "@/components/Sparkline";
 import { formatDuration } from "@/lib/format";
 import SemanticBadge from "@/components/SemanticBadge";
+import ActionIcon from "@/components/ActionIcon";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function Dashboard() {
       <div className="page-head">
         <h1>Dashboard</h1>
         <Link className="btn" href="/analyses/new">
+          <ActionIcon name="play" />
           Run new analysis
         </Link>
       </div>
