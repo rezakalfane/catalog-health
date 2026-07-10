@@ -7,6 +7,25 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## analysis-comparison — 2026-07-10
+
+Analysis comparison workflow for completed runs from the same environment.
+Developed on `analysis-comparison`, merged into `main` (no-ff); merge hash
+backfilled next entry. HISTORY.md entry 29.
+
+Highlights:
+
+- Added `GET /api/analyses/compare?base=<id>&target=<id>` plus shared
+  comparison helpers for summary, dimension, issue, category, and product
+  diffs.
+- Added `/analyses/compare` with score/grade/product-count cards, semantic
+  comparability warning, dimension/issue/category tables, and product-level
+  changed/added/removed/unchanged filtering.
+- Added "Compare with previous" on completed analysis pages when an earlier
+  completed run exists for the same environment.
+- Polished the product comparison table so grade changes stay on one line and
+  resolved/new issue columns stay compact.
+
 ## product-csv-export — 2026-07-10
 
 Excel-friendly CSV export for analysis product lists. Developed on

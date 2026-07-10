@@ -65,6 +65,10 @@ npm run dev
 - **Dashboard / environment pages** — latest grade, score sparkline over
   time, dimension breakdown, most common issues, weakest categories, and the
   impact-weighted top-fix list.
+- **Analysis comparison** — from a completed analysis, compare it with the
+  previous run from the same environment: score/grade/product-count deltas,
+  dimension shifts, issue and category changes, and product-by-product
+  resolved/new issue details.
 - **Product table & drill-down** — every analysis stores its full per-product
   results: browse them with filters (search, grade, issue, category, sort),
   export the filtered/sorted list as an Excel-friendly CSV, and open any
@@ -189,7 +193,7 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
       analysis — older analyses predating this have summary only)
 - [x] CSV export from the web app (filtered/sorted product list)
 - [ ] PDF export from the web app
-- [ ] Compare two analyses (what improved / regressed)
+- [x] Compare two analyses (what improved / regressed)
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)
 - [x] Auth (Google SSO + dev login) and per-user multi-tenancy

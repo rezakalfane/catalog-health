@@ -109,6 +109,12 @@ export function getAnalysisProducts(id) {
   return request(`/api/analyses/${id}/products`);
 }
 
+/** Compare two completed analyses from the same environment. */
+export function compareAnalyses(base, target) {
+  const params = new URLSearchParams({ base, target });
+  return request(`/api/analyses/compare?${params}`);
+}
+
 /** Start a new analysis; resolves with the created `{ id }`. */
 export function createAnalysis(payload) {
   return jsonRequest("/api/analyses", "POST", payload);
