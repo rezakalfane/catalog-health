@@ -484,3 +484,22 @@ the app's own rendering.
 
 Verified with a production `next build` and a small Node check for allowed /
 blocked Ollama URL forms.
+
+## 28. Product list CSV export — 2026-07-10
+
+> **Prompts:** In a Products page listing all products of an analysis, can you
+> add an "Export as CSV" button, so I can open the list in Excel (should
+> include all columns and list of issues for each product)? → Perfect, you can
+> update docs, create branch, commit and merge.
+
+**Summary:** Added an `Export as CSV` button to the analysis product table
+(`/analyses/[id]/products`). The export uses the already-loaded product rows
+and respects the current filters and sort order, exporting all matching rows
+instead of only the current pagination page. Columns: product id, product
+name, SKU, score, grade, impact, views, units sold, issue count, and
+human-readable issue labels joined with semicolons.
+
+The CSV writer quotes all cells, uses CRLF line endings and a UTF-8 BOM for
+Excel, and prefixes formula-like values to reduce spreadsheet formula
+injection risk. README now documents the feature and marks CSV export as
+done in the roadmap.
