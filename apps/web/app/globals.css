@@ -258,6 +258,37 @@ th.sortable .sort-arrow { display: inline-block; width: 1em; font-size: 0.7em; m
 }
 .filters input, .filters select { margin-bottom: 0.5rem; }
 
+/* Analysis comparison -------------------------------------------------------- */
+.compare-products th:nth-child(2),
+.compare-products th:nth-child(3),
+.compare-products th:nth-child(4),
+.compare-products th:nth-child(5),
+.compare-products td:nth-child(2),
+.compare-products td:nth-child(3),
+.compare-products td:nth-child(4),
+.compare-products td:nth-child(5) {
+  white-space: nowrap;
+}
+.compare-products th:nth-child(6),
+.compare-products td:nth-child(6) {
+  width: 18%;
+}
+.compare-products th:nth-child(7),
+.compare-products td:nth-child(7) {
+  width: 22%;
+}
+.compare-products td:nth-child(6),
+.compare-products td:nth-child(7) {
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+.grade-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
 /* Analysis progress ---------------------------------------------------------- */
 .progress { min-width: 260px; }
 .progress-top {

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import AnalysisLiveReport from "@/components/AnalysisLiveReport";
 import { formatDuration } from "@/lib/format";
-import { getEnvironment, skipSemantic } from "@/lib/api-client";
+import { getEnvironment, listAnalyses, skipSemantic } from "@/lib/api-client";
 import SemanticBadge from "@/components/SemanticBadge";
 
 export default function AnalysisPage() {
@@ -13,6 +13,7 @@ export default function AnalysisPage() {
   // Fed by AnalysisLiveReport's polling — this page only renders the header.
   const [analysis, setAnalysis] = useState(null);
   const [envName, setEnvName] = useState("");
+  const [previousAnalysisId, setPreviousAnalysisId] = useState(null);
   const [cancellingSemantic, setCancellingSemantic] = useState(false);
 
   async function cancelSemantic() {
@@ -23,6 +24,11 @@ export default function AnalysisPage() {
   }
 
   const environmentId = analysis?.environmentId;
+  const status = analysis ? analysis.status || "done" : "loading";
+  const progress = analysis?.progress;
+  const isDemo = environmentId === "demo";
+  const envHref = isDemo ? "/" : `/environments/${environmentId}`;
+
   useEffect(() => {
     if (!environmentId) return;
     if (environmentId === "demo") {
@@ -32,10 +38,15 @@ export default function AnalysisPage() {
     getEnvironment(environmentId).then((env) => env && setEnvName(env.name));
   }, [environmentId]);
 
-  const status = analysis ? analysis.status || "done" : "loading";
-  const progress = analysis?.progress;
-  const isDemo = environmentId === "demo";
-  const envHref = isDemo ? "/" : `/environments/${environmentId}`;
+  useEffect(() => {
+    if (!analysis || status !== "done") return;
+    listAnalyses({ environmentId: analysis.environmentId, status: "done" })
+      .then((analyses) => {
+        const currentIndex = analyses.findIndex((a) => a.id === analysis.id);
+        setPreviousAnalysisId(currentIndex >= 0 ? analyses[currentIndex + 1]?.id || null : null);
+      })
+      .catch(() => setPreviousAnalysisId(null));
+  }, [analysis, status]);
 
   return (
     <>
@@ -92,6 +103,14 @@ export default function AnalysisPage() {
         )}
         {status === "done" && analysis && (
           <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+            {previousAnalysisId && (
+              <Link
+                className="btn secondary"
+                href={`/analyses/compare?base=${previousAnalysisId}&target=${id}`}
+              >
+                Compare with previous
+              </Link>
+            )}
             {analysis.hasRows && (
               <Link className="btn secondary" href={`/analyses/${id}/products`}>
                 All products

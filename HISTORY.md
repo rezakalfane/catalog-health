@@ -503,3 +503,33 @@ The CSV writer quotes all cells, uses CRLF line endings and a UTF-8 BOM for
 Excel, and prefixes formula-like values to reduce spreadsheet formula
 injection risk. README now documents the feature and marks CSV export as
 done in the roadmap.
+
+## 29. Analysis comparison — 2026-07-10
+
+> **Prompts:** Let's think about Analysis comparison, how would you best
+> implement it, and show it in the front-end so it's easy to understand
+> (global comparisons on scoring, number of products; product by product
+> comparison; anything else?) → Let's go phase by phase, test what needs to
+> be tested in between → [screenshot] Can you slightly better present the
+> table, grade change should be on one line, maybe reduce a little bit the
+> last column? → Perfect, you can document, branch, commit and merge.
+
+**Summary:** Added a first-class comparison flow for completed analyses from
+the same environment.
+
+- Phase 1: server-side comparison helpers (`lib/compare.js`) and
+  `GET /api/analyses/compare?base=<id>&target=<id>`, with same-user,
+  same-environment, completed-analysis validation.
+- Phase 2: `/analyses/compare` page plus a "Compare with previous" action on
+  completed analysis pages. The page shows previous/current dates, headline
+  score/grade/product-count changes, dimension deltas, issue-count deltas,
+  category score/product-count deltas, and a warning when one run includes
+  semantic scoring and the other does not.
+- Phase 3: product-by-product comparison table, matching by BigCommerce
+  product id. It classifies products as changed/added/removed/unchanged and
+  shows score, grade, issue-count, resolved issues, and new issues, with
+  search and status filters.
+- UI polish: grade transitions now stay on one line, numeric columns avoid
+  awkward wrapping, and resolved/new issue columns are more compact.
+
+Each phase was checked with `npm run build`; the final build passed.
