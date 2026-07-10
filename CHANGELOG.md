@@ -7,6 +7,24 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## review-hardening-fixes — 2026-07-10
+
+Security/reliability fixes from a code review. Developed on
+`review-hardening-fixes`, to be merged into `main` (no-ff). HISTORY.md entry
+27.
+
+Highlights:
+
+- Fixed legacy LLM secret encryption sweep so each user's `settings.llm` row
+  is updated by `(user_id, key)`, avoiding cross-user settings overwrite when
+  enabling `APP_ENCRYPTION_KEY` after multiple users exist.
+- Restricted Ollama base URLs to local HTTP endpoints only (`localhost`,
+  `127.0.0.1`, `[::1]`) and applied the same validation when saving settings,
+  testing the connection, and running semantic scoring.
+- Added a 30-second timeout to each BigCommerce API request so stalled
+  upstream calls fail analyses cleanly instead of leaving jobs running
+  indefinitely.
+
 ## refactor/central-api-client — 2026-07-09
 
 Refactoring exercise plus a small incidental fix, merged into `main` (no-ff),

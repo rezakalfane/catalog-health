@@ -6,15 +6,27 @@
 const API_BASE = "https://api.bigcommerce.com/stores";
 const PAGE_LIMIT = 250;
 const PRODUCT_INCLUDES = "variants,images,custom_fields,options";
+const REQUEST_TIMEOUT_MS = 30000;
 
 async function getPage(storeHash, token, path, params) {
   const url = new URL(`${API_BASE}/${storeHash}/v3${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
   for (let attempt = 0; attempt < 5; attempt++) {
-    const res = await fetch(url, {
-      headers: { "X-Auth-Token": token, Accept: "application/json" },
-    });
+    let res;
+    try {
+      res = await fetch(url, {
+        headers: { "X-Auth-Token": token, Accept: "application/json" },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (err) {
+      if (err.name === "TimeoutError" || err.name === "AbortError") {
+        throw new Error(
+          `BigCommerce API timed out after ${Math.round(REQUEST_TIMEOUT_MS / 1000)}s on ${path}`
+        );
+      }
+      throw err;
+    }
     if (res.status === 429) {
       const wait = Number(res.headers.get("X-Rate-Limit-Time-Reset-Ms") || 30000);
       await new Promise((r) => setTimeout(r, wait));

@@ -18,6 +18,27 @@ const MAX_DESC_CHARS = 2000;
 const MIN_JUDGEABLE_CHARS = 20;
 
 const VERDICT_VALUES = ["yes", "partial", "no"];
+const ALLOWED_OLLAMA_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+export function normalizeOllamaBaseUrl(baseUrl = DEFAULT_OLLAMA_BASE_URL) {
+  let url;
+  try {
+    url = new URL(baseUrl || DEFAULT_OLLAMA_BASE_URL);
+  } catch {
+    throw new Error("Ollama URL must be a valid URL.");
+  }
+  if (url.protocol !== "http:") {
+    throw new Error("Ollama URL must use http.");
+  }
+  if (!ALLOWED_OLLAMA_HOSTS.has(url.hostname)) {
+    throw new Error("Ollama URL must point to localhost, 127.0.0.1, or [::1].");
+  }
+  if (url.username || url.password || url.search || url.hash) {
+    throw new Error("Ollama URL must not include credentials, query parameters, or fragments.");
+  }
+  url.pathname = url.pathname.replace(/\/+$/, "");
+  return url.toString().replace(/\/$/, "");
+}
 
 const JUDGE_SYSTEM = `You are a product-content auditor for an e-commerce catalog.
 For each product you receive (name + description), judge whether the description
@@ -197,7 +218,7 @@ function openaiJudge({ apiKey, model }) {
 }
 
 function ollamaJudge({ baseUrl, model }) {
-  const base = (baseUrl || DEFAULT_OLLAMA_BASE_URL).replace(/\/$/, "");
+  const base = normalizeOllamaBaseUrl(baseUrl);
   return async function judgeChunk(products) {
     let res;
     try {

@@ -42,12 +42,13 @@ function secureDb() {
         changed += 1;
       }
     }
-    const s = conn.prepare("SELECT value FROM settings WHERE key = 'llm'").get();
-    if (s) {
+    for (const s of conn.prepare("SELECT user_id, key, value FROM settings WHERE key = 'llm'").all()) {
       const llm = JSON.parse(s.value);
       if (llm.apiKey && !isEncrypted(llm.apiKey)) {
         llm.apiKey = encryptSecret(llm.apiKey);
-        conn.prepare("UPDATE settings SET value = ? WHERE key = 'llm'").run(JSON.stringify(llm));
+        conn
+          .prepare("UPDATE settings SET value = ? WHERE user_id = ? AND key = ?")
+          .run(JSON.stringify(llm), s.user_id, s.key);
         changed += 1;
       }
     }
