@@ -10,8 +10,8 @@ merged. For the prompt-by-prompt evolution of the tool, see
 ## review-hardening-fixes — 2026-07-10
 
 Security/reliability fixes from a code review. Developed on
-`review-hardening-fixes`, to be merged into `main` (no-ff). HISTORY.md entry
-27.
+`review-hardening-fixes`, merged into `main` (no-ff); merge hash backfilled
+next entry. HISTORY.md entry 27.
 
 Highlights:
 
