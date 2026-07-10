@@ -58,16 +58,17 @@ export default function AnalysisPage() {
             {status === "done" && <SemanticBadge analysis={analysis} />}
           </h1>
           <p className="muted">
-            {envName || "…"}
-            {analysis && <> · started {new Date(analysis.createdAt).toLocaleString()}</>}
+            <span>
+              {envName || "…"}
+              {analysis && <> · started {new Date(analysis.createdAt).toLocaleString()}</>}
+            </span>
             {status === "done" && analysis?.durationMs != null && (
-              <>
-                {" "}
-                · completed in {formatDuration(analysis.durationMs)}
+              <span className="analysis-meta-line">
+                completed in {formatDuration(analysis.durationMs)}
                 {analysis.semanticMs != null && (
                   <> (semantic {formatDuration(analysis.semanticMs)})</>
                 )}
-              </>
+              </span>
             )}
           </p>
         </div>
