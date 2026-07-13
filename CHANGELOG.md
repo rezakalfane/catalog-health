@@ -7,6 +7,25 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/report-pdf-export — 2026-07-13
+
+Completed-analysis PDF export. Developed on `feat/report-pdf-export`, merged
+into `main` (no-ff); merge hash backfilled next entry. HISTORY.md entry 31.
+
+Highlights:
+
+- Added an authenticated `GET /api/analyses/[id]/pdf` endpoint and an
+  "Export as PDF" action on completed report pages.
+- Reports include headline health statistics, grade distribution and
+  dimension charts, common issues, weakest categories, and the ten
+  highest-impact fixes in a paginated A4 layout.
+- Download names include the environment, UTC analysis timestamp, and short
+  analysis id to remain unique across multiple runs per day.
+- Added `npm run test_pdf_export`, which generates and structurally validates
+  a representative report under the gitignored `tmp/pdfs/` directory.
+- Kept PDFKit external to the Next.js server bundle so its built-in Helvetica
+  metrics remain available at runtime.
+
 ## openai-judge-throttling — 2026-07-10
 
 OpenAI semantic-judge robustness for model compatibility and rate limits.

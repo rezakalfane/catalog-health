@@ -13,5 +13,8 @@ data/
 # CLI output
 health_report/
 
+# Generated test and preview artifacts
+tmp/
+
 .DS_Store
 *.log

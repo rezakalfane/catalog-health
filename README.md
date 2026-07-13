@@ -69,6 +69,11 @@ npm run dev
   previous run from the same environment: score/grade/product-count deltas,
   dimension shifts, issue and category changes, and product-by-product
   resolved/new issue details.
+- **PDF report export** — download a completed analysis as a polished A4
+  report with headline statistics, grade and dimension charts, common issues,
+  weakest categories, and the ten highest-impact fixes. Filenames include the
+  environment, analysis timestamp (UTC), and a short analysis id so repeated
+  runs never overwrite one another.
 - **Product table & drill-down** — every analysis stores its full per-product
   results: browse them with filters (search, grade, issue, category, sort),
   export the filtered/sorted list as an Excel-friendly CSV, and open any
@@ -79,6 +84,16 @@ npm run dev
   write-only like store tokens (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` env
   vars work as fallbacks). "Connect & list models" pulls the live model list
   from the provider.
+
+### PDF export smoke test
+
+```bash
+npm run test_pdf_export
+```
+
+This generates a representative two-page report, validates its PDF structure,
+and leaves the ignored artifact at `tmp/pdfs/catalog-health-test.pdf` for
+optional visual inspection.
 
 ## The five scoring dimensions
 
@@ -198,7 +213,7 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
       (`/analyses/[id]/products`; per-product rows persist with each new
       analysis — older analyses predating this have summary only)
 - [x] CSV export from the web app (filtered/sorted product list)
-- [ ] PDF export from the web app
+- [x] PDF export from the web app
 - [x] Compare two analyses (what improved / regressed)
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)

@@ -563,3 +563,32 @@ Each phase was checked with `npm run build`; the final build passed.
   `OPENAI_JUDGE_CONCURRENCY` and `OPENAI_JUDGE_MIN_DELAY_MS`.
 
 Verified with `npm run build`.
+
+## 31. Completed-analysis PDF export — 2026-07-13
+
+> **Prompts:** Add a new Export as PDF when looking at a report, with all main
+> information shown and statistics/charts where useful. Add generated `tmp/`
+> files to gitignore and a `test_pdf_export` package command. Fix the PDF
+> endpoint's missing Helvetica metrics, make filenames unique across multiple
+> analyses per day, then update docs, branch, commit, and merge.
+
+**Summary:** Added a server-generated PDF report for completed analyses.
+
+- The analysis header now offers "Export as PDF". The authenticated
+  `GET /api/analyses/[id]/pdf` route applies the same user ownership checks as
+  the report API and rejects incomplete analyses.
+- The A4 report includes health score, product/pass/fail statistics, grade
+  distribution and dimension charts, the ten most common issues, eight
+  weakest categories, and ten traffic/sales-weighted priority fixes. Tables
+  wrap long values, continue across pages, and include page-numbered footers.
+- Filenames use the environment, UTC analysis start timestamp, and first eight
+  characters of the analysis id, for example
+  `catalog-health-store-2026-07-13T08-42-00Z-83d3d077.pdf`.
+- PDFKit is listed in `serverExternalPackages`; bundling it caused Next.js to
+  omit the package-relative Helvetica AFM files at runtime.
+- `npm run test_pdf_export` generates a representative two-page report,
+  validates its PDF signature, EOF marker, size, and page count, and writes the
+  ignored artifact to `tmp/pdfs/catalog-health-test.pdf`.
+
+Verified with the smoke test, production build, visual page renders, and an
+authenticated request against a stored analysis.

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@catalog-health/core"],
-  // Native module — must be required at runtime, not bundled.
-  serverExternalPackages: ["better-sqlite3"],
+  // Runtime packages with native code or package-relative assets must not be bundled.
+  serverExternalPackages: ["better-sqlite3", "pdfkit"],
 };
 export default nextConfig;
