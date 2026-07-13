@@ -105,6 +105,10 @@ export default function AnalysisPage() {
         )}
         {status === "done" && analysis && (
           <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+            <a className="btn secondary" href={`/api/analyses/${id}/pdf`}>
+              <ActionIcon name="download" />
+              Export as PDF
+            </a>
             {previousAnalysisId && (
               <Link
                 className="btn secondary"

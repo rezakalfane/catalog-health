@@ -7,6 +7,7 @@
     "dev": "npm run dev --workspace @catalog-health/web",
     "build": "npm run build --workspace @catalog-health/web",
     "start": "npm run start --workspace @catalog-health/web",
+    "test_pdf_export": "npm run test_pdf_export --workspace @catalog-health/web",
     "cli": "node packages/cli/src/index.js"
   },
   "engines": { "node": ">=18.18" }
