@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import {
   listEnvironments,
   createEnvironment,
+  getScoringProfileForUser,
   redactEnvironment,
 } from "@/lib/db";
 import { getApiUser } from "@/lib/auth-helpers";
 import {
   DEFAULT_SCORING_PROFILE_ID,
-  isScoringProfileId,
 } from "@catalog-health/core/profiles";
 
 export async function GET() {
@@ -32,7 +32,7 @@ export async function POST(request) {
       { status: 400 }
     );
   }
-  if (!isScoringProfileId(scoringProfileId)) {
+  if (!getScoringProfileForUser(user.id, scoringProfileId)) {
     return NextResponse.json({ error: "Unknown scoring profile" }, { status: 400 });
   }
   const env = createEnvironment(user.id, {

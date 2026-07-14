@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { listEnvironments, getSettings, createAnalysis } from "@/lib/api-client";
 import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
-import { getScoringProfile } from "@catalog-health/core/profiles";
 
 function NewAnalysisForm() {
   const router = useRouter();
@@ -88,13 +87,14 @@ function NewAnalysisForm() {
             >
               {environments.map((env) => (
                 <option key={env.id} value={env.id}>
-                  {env.name} — {getScoringProfile(env.scoringProfileId).label}
+                  {env.name} — {env.scoringProfile?.label || "Balanced"}
                 </option>
               ))}
             </select>
             {selectedEnvironment && (
               <ScoringProfileSubtitle
                 profileId={selectedEnvironment.scoringProfileId}
+                profile={selectedEnvironment.scoringProfile}
                 description
               />
             )}

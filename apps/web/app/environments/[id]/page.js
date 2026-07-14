@@ -51,7 +51,7 @@ export default async function EnvironmentDetail({ params }) {
       <div className="page-head">
         <div>
           <h1>{env.name}</h1>
-          <ScoringProfileSubtitle profileId={env.scoringProfileId} description />
+          <ScoringProfileSubtitle profileId={env.scoringProfileId} profile={env.scoringProfile} description />
           <p className="muted">Store hash: {env.storeHash}</p>
         </div>
         <RunAnalysisAction environmentId={env.id} />
@@ -213,6 +213,7 @@ export default async function EnvironmentDetail({ params }) {
                         runningAnalysis.scoringMetadata?.profile?.id ||
                         DEFAULT_SCORING_PROFILE_ID
                       }
+                      profile={runningAnalysis.scoringMetadata?.profile}
                     />
                   </td>
                   <td className="muted">—</td>
@@ -241,6 +242,7 @@ export default async function EnvironmentDetail({ params }) {
                       profileId={
                         a.scoringMetadata?.profile?.id || DEFAULT_SCORING_PROFILE_ID
                       }
+                      profile={a.scoringMetadata?.profile}
                     />
                   </td>
                   <td>{a.summary.productCount}</td>

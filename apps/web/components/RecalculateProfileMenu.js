@@ -2,17 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { SCORING_PROFILES } from "@catalog-health/core/profiles";
-import { recalculateAnalysis } from "@/lib/api-client";
+import { listScoringProfiles, recalculateAnalysis } from "@/lib/api-client";
 import ActionIcon from "@/components/ActionIcon";
 
-export default function RecalculateProfileMenu({ analysisId, currentProfileId }) {
+export default function RecalculateProfileMenu({ analysisId, currentProfileId, currentProfileVersion }) {
   const router = useRouter();
   const menuRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [availableProfiles, setAvailableProfiles] = useState([]);
   const [pendingProfileId, setPendingProfileId] = useState("");
   const [error, setError] = useState("");
-  const profiles = SCORING_PROFILES.filter((profile) => profile.id !== currentProfileId);
+  const profiles = availableProfiles.filter(
+    (profile) => profile.id !== currentProfileId || profile.version !== currentProfileVersion
+  );
+
+  useEffect(() => {
+    listScoringProfiles()
+      .then((data) => setAvailableProfiles(data.profiles || []))
+      .catch(() => setAvailableProfiles([]));
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +81,9 @@ export default function RecalculateProfileMenu({ analysisId, currentProfileId })
               onClick={() => chooseProfile(profile.id)}
             >
               <span className="compare-menu-date">{profile.label}</span>
-              <span className="compare-menu-details">{profile.description}</span>
+              <span className="compare-menu-details">
+                {profile.description} · v{profile.version} · {profile.builtIn ? "built-in" : "custom"}
+              </span>
             </button>
           ))}
           {error && <p className="error recalculate-menu-error">{error}</p>}

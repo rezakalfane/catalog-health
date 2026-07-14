@@ -69,6 +69,22 @@ export function testSettingsConnection({ id, provider, apiKey, baseUrl }) {
   });
 }
 
+/* ---- Scoring profiles -------------------------------------------------- */
+
+export function listScoringProfiles() {
+  return request("/api/profiles");
+}
+
+export function saveScoringProfile(id, profile) {
+  return id
+    ? jsonRequest(`/api/profiles/${id}`, "PUT", profile)
+    : jsonRequest("/api/profiles", "POST", profile);
+}
+
+export function deleteScoringProfile(id) {
+  return request(`/api/profiles/${id}`, { method: "DELETE" });
+}
+
 /* ---- Environments ------------------------------------------------------ */
 
 /** All configured environments for the current user. */

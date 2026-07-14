@@ -36,6 +36,7 @@ export default async function RootLayout({ children }) {
               <div className="sidebar-subnav">
                 <Link href="/environments">Environments</Link>
                 <Link href="/settings">Models</Link>
+                <Link href="/profiles">Profiles</Link>
               </div>
             </div>
             <div style={{ marginTop: "auto" }}>

@@ -9,7 +9,12 @@
  */
 import crypto from "node:crypto";
 import { getDb } from "./sqlite.js";
-import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
+import {
+  DEFAULT_SCORING_PROFILE_ID,
+  SCORING_PROFILES,
+  getScoringProfile,
+  isScoringProfileId,
+} from "@catalog-health/core/profiles";
 import {
   encryptSecret,
   decryptSecret,
@@ -276,9 +281,110 @@ export function redactLlmModel(model) {
   };
 }
 
+// -- Scoring profiles -------------------------------------------------------
+
+function toCustomScoringProfile(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    label: row.label,
+    version: `1.0.${Math.max(0, row.revision - 1)}`,
+    description: row.description || "",
+    dimensionWeights: parse(row.dimension_weights),
+    semanticWeight: row.semantic_weight,
+    thresholds: parse(row.thresholds),
+    builtIn: false,
+    revision: row.revision,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function listCustomScoringProfiles(userId) {
+  return getDb()
+    .prepare("SELECT * FROM scoring_profiles WHERE user_id = ? ORDER BY created_at, label")
+    .all(userId)
+    .map(toCustomScoringProfile);
+}
+
+export function listScoringProfiles(userId) {
+  const counts = new Map(
+    getDb()
+      .prepare("SELECT scoring_profile_id AS id, COUNT(*) AS count FROM environments WHERE user_id = ? GROUP BY scoring_profile_id")
+      .all(userId)
+      .map((row) => [row.id, row.count])
+  );
+  return [
+    ...SCORING_PROFILES.map((profile) => ({ ...profile, builtIn: true })),
+    ...listCustomScoringProfiles(userId),
+  ].map((profile) => ({ ...profile, environmentCount: counts.get(profile.id) || 0 }));
+}
+
+export function getScoringProfileForUser(userId, profileId = DEFAULT_SCORING_PROFILE_ID) {
+  if (isScoringProfileId(profileId)) return { ...getScoringProfile(profileId), builtIn: true };
+  return toCustomScoringProfile(
+    getDb().prepare("SELECT * FROM scoring_profiles WHERE id = ? AND user_id = ?").get(profileId, userId)
+  );
+}
+
+export function createCustomScoringProfile(userId, profile) {
+  const now = new Date().toISOString();
+  const profileId = `custom-${id()}`;
+  getDb().prepare(
+    `INSERT INTO scoring_profiles
+       (id, user_id, label, description, dimension_weights, semantic_weight, thresholds, revision, created_at, updated_at)
+     VALUES (@id, @userId, @label, @description, @dimensionWeights, @semanticWeight, @thresholds, 1, @createdAt, @updatedAt)`
+  ).run({
+    id: profileId,
+    userId,
+    label: profile.label,
+    description: profile.description,
+    dimensionWeights: JSON.stringify(profile.dimensionWeights),
+    semanticWeight: profile.semanticWeight,
+    thresholds: JSON.stringify(profile.thresholds),
+    createdAt: now,
+    updatedAt: now,
+  });
+  return getScoringProfileForUser(userId, profileId);
+}
+
+export function updateCustomScoringProfile(userId, profileId, profile) {
+  const result = getDb().prepare(
+    `UPDATE scoring_profiles SET
+       label = @label, description = @description, dimension_weights = @dimensionWeights,
+       semantic_weight = @semanticWeight, thresholds = @thresholds,
+       revision = revision + 1, updated_at = @updatedAt
+     WHERE id = @id AND user_id = @userId`
+  ).run({
+    id: profileId,
+    userId,
+    label: profile.label,
+    description: profile.description,
+    dimensionWeights: JSON.stringify(profile.dimensionWeights),
+    semanticWeight: profile.semanticWeight,
+    thresholds: JSON.stringify(profile.thresholds),
+    updatedAt: new Date().toISOString(),
+  });
+  return result.changes ? getScoringProfileForUser(userId, profileId) : null;
+}
+
+export function deleteCustomScoringProfile(userId, profileId) {
+  const db = getDb();
+  const profile = getScoringProfileForUser(userId, profileId);
+  if (!profile || profile.builtIn) return null;
+  let reassignedEnvironments = 0;
+  db.transaction(() => {
+    reassignedEnvironments = db.prepare(
+      "UPDATE environments SET scoring_profile_id = ? WHERE user_id = ? AND scoring_profile_id = ?"
+    ).run(DEFAULT_SCORING_PROFILE_ID, userId, profileId).changes;
+    db.prepare("DELETE FROM scoring_profiles WHERE id = ? AND user_id = ?").run(profileId, userId);
+  })();
+  return { deleted: true, reassignedEnvironments };
+}
+
 // -- Environments -----------------------------------------------------------
 
-function toEnvironment(row) {
+function toEnvironment(row, userId) {
   if (!row) return null;
   return {
     id: row.id,
@@ -286,6 +392,7 @@ function toEnvironment(row) {
     storeHash: row.store_hash,
     accessToken: decryptSecret(row.access_token),
     scoringProfileId: row.scoring_profile_id || DEFAULT_SCORING_PROFILE_ID,
+    scoringProfile: getScoringProfileForUser(userId, row.scoring_profile_id || DEFAULT_SCORING_PROFILE_ID),
     createdAt: row.created_at,
   };
 }
@@ -294,7 +401,7 @@ export function listEnvironments(userId) {
   return secureDb()
     .prepare("SELECT * FROM environments WHERE user_id = ? ORDER BY created_at")
     .all(userId)
-    .map(toEnvironment);
+    .map((row) => toEnvironment(row, userId));
 }
 
 /** Fetch an environment, scoped to its owner (null if not found or not owned). */
@@ -302,7 +409,8 @@ export function getEnvironment(userId, envId) {
   return toEnvironment(
     secureDb()
       .prepare("SELECT * FROM environments WHERE id = ? AND user_id = ?")
-      .get(envId, userId)
+      .get(envId, userId),
+    userId
   );
 }
 
@@ -318,6 +426,7 @@ export function createEnvironment(userId, {
     storeHash,
     accessToken,
     scoringProfileId,
+    scoringProfile: getScoringProfileForUser(userId, scoringProfileId),
     createdAt: new Date().toISOString(),
   };
   secureDb()

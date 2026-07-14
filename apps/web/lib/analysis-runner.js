@@ -16,10 +16,10 @@ import {
   judgeCatalog,
   summarize,
   createScoringMetadata,
-  getScoringProfile,
 } from "@catalog-health/core";
 import {
   createAnalysis,
+  getScoringProfileForUser,
   updateAnalysis,
   listRunningAnalysesAllUsers,
 } from "@/lib/db";
@@ -59,7 +59,7 @@ export function reconcileInterruptedAnalyses() {
  * Returns immediately with the (running) record.
  */
 export function startAnalysisRun({ userId, environment, demo, semantic, semanticModel = null }) {
-  const scoringProfile = getScoringProfile(environment?.scoringProfileId);
+  const scoringProfile = environment?.scoringProfile || getScoringProfileForUser(userId);
   const analysis = createAnalysis({
     userId,
     environmentId: environment ? environment.id : "demo",
