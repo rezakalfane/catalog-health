@@ -5,6 +5,15 @@ const freezeProfile = (profile) => Object.freeze({
 });
 
 export const DEFAULT_SCORING_PROFILE_ID = "catalog-health-default";
+export const SCORING_DIMENSIONS = Object.freeze(["content", "structure", "taxonomy", "hygiene", "feed"]);
+export const SCORING_THRESHOLD_KEYS = Object.freeze([
+  "minDescriptionChars",
+  "goodDescriptionChars",
+  "minImages",
+  "maxSaneCategories",
+  "titleMin",
+  "titleMax",
+]);
 
 export const SCORING_PROFILES = Object.freeze([
   freezeProfile({
@@ -106,6 +115,44 @@ export function isScoringProfileId(profileId) {
 export function getScoringProfile(profileOrId = DEFAULT_SCORING_PROFILE_ID) {
   if (profileOrId && typeof profileOrId === "object") return profileOrId;
   return PROFILES_BY_ID.get(profileOrId) || PROFILES_BY_ID.get(DEFAULT_SCORING_PROFILE_ID);
+}
+
+/** Validate and normalize merchant-authored profile settings. */
+export function normalizeScoringProfileInput(input = {}) {
+  const label = String(input.label || "").trim();
+  const description = String(input.description || "").trim();
+  if (!label || label.length > 80) throw new Error("Profile name must be between 1 and 80 characters");
+  if (description.length > 400) throw new Error("Profile description must be 400 characters or fewer");
+
+  const dimensionWeights = Object.fromEntries(
+    SCORING_DIMENSIONS.map((key) => [key, Number(input.dimensionWeights?.[key])])
+  );
+  if (Object.values(dimensionWeights).some((value) => !Number.isFinite(value) || value < 0 || value > 1)) {
+    throw new Error("Every dimension weight must be between 0 and 100%");
+  }
+  const total = Object.values(dimensionWeights).reduce((sum, value) => sum + value, 0);
+  if (Math.abs(total - 1) > 0.000001) throw new Error("Dimension weights must total 100%");
+
+  const semanticWeight = Number(input.semanticWeight);
+  if (!Number.isFinite(semanticWeight) || semanticWeight < 0 || semanticWeight > 1) {
+    throw new Error("Semantic weight must be between 0 and 100%");
+  }
+  const thresholds = Object.fromEntries(
+    SCORING_THRESHOLD_KEYS.map((key) => [key, Number(input.thresholds?.[key])])
+  );
+  if (Object.values(thresholds).some((value) => !Number.isInteger(value) || value < 0)) {
+    throw new Error("Every scoring threshold must be a positive whole number or zero");
+  }
+  if (thresholds.goodDescriptionChars < thresholds.minDescriptionChars) {
+    throw new Error("Good description length must be at least the minimum description length");
+  }
+  if (thresholds.titleMax < thresholds.titleMin) {
+    throw new Error("Maximum title length must be at least the minimum title length");
+  }
+  if (thresholds.minImages > 50 || thresholds.maxSaneCategories > 100 || thresholds.titleMax > 1000 || thresholds.goodDescriptionChars > 50000) {
+    throw new Error("One or more scoring thresholds are outside the supported range");
+  }
+  return { label, description, dimensionWeights, semanticWeight, thresholds };
 }
 
 const defaultProfile = getScoringProfile();

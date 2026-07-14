@@ -2,10 +2,11 @@ import { getScoringProfile } from "@catalog-health/core/profiles";
 
 export default function ScoringProfileSubtitle({
   profileId,
+  profile: suppliedProfile,
   description = false,
   as: Element = "p",
 }) {
-  const profile = getScoringProfile(profileId);
+  const profile = suppliedProfile || getScoringProfile(profileId);
 
   return (
     <Element className="profile-subtitle">

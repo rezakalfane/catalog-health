@@ -7,6 +7,30 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feature/custom-scoring-profiles — 2026-07-14
+
+Reusable custom scoring profiles. Developed on
+`feature/custom-scoring-profiles`, merged into `main` (no-ff). HISTORY.md entry
+42.
+
+Highlights:
+
+- Added Settings → Profiles with protected, inspectable built-in definitions
+  followed by owner-scoped custom profiles supporting add, edit, and remove.
+- Added validated percentage weights, semantic weight, and description, image,
+  taxonomy, and title thresholds through authenticated CRUD APIs and SQLite
+  migration 11.
+- Integrated custom profiles into environment selection, new analyses, profile
+  subtitles, immutable scoring metadata, and stored-fact recalculation.
+- Versioned every custom-profile edit so historical analyses can be replayed
+  with a newer revision of the same profile while retaining old snapshots.
+- Reassigns environments to Balanced when a custom profile is removed without
+  altering historical analyses; built-in mutation is blocked server-side.
+- Displays profile names and versions in compact analysis headers while keeping
+  internal IDs in the detailed metadata panel.
+- Added `npm run test_scoring_profiles` for validation, CRUD, ownership,
+  environment usage, revision replay, protected built-ins, and deletion safety.
+
 ## feature/settings-navigation — 2026-07-14
 
 Grouped configuration navigation. Developed on

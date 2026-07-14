@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { listEnvironments, saveEnvironment, deleteEnvironment } from "@/lib/api-client";
+import { listEnvironments, listScoringProfiles, saveEnvironment, deleteEnvironment } from "@/lib/api-client";
 import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
 import ScoringProfileSelect from "@/components/ScoringProfileSelect";
 import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
@@ -15,6 +15,7 @@ const EMPTY = {
 
 export default function EnvironmentsPage() {
   const [environments, setEnvironments] = useState([]);
+  const [profiles, setProfiles] = useState([]);
   const [form, setForm] = useState(EMPTY);
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
@@ -24,7 +25,10 @@ export default function EnvironmentsPage() {
     setEnvironments(await listEnvironments());
   }
   useEffect(() => {
-    refresh();
+    Promise.all([listEnvironments(), listScoringProfiles()]).then(([envs, data]) => {
+      setEnvironments(envs);
+      setProfiles(data.profiles || []);
+    });
   }, []);
 
   function startEdit(env) {
@@ -105,6 +109,7 @@ export default function EnvironmentsPage() {
           <ScoringProfileSelect
             value={form.scoringProfileId}
             onChange={(scoringProfileId) => setForm({ ...form, scoringProfileId })}
+            profiles={profiles}
           />
           {error && <p className="error">{error}</p>}
           <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -142,7 +147,7 @@ export default function EnvironmentsPage() {
                 <tr key={env.id}>
                   <td>
                     <a href={`/environments/${env.id}`}>{env.name}</a>
-                    <ScoringProfileSubtitle profileId={env.scoringProfileId} />
+                    <ScoringProfileSubtitle profileId={env.scoringProfileId} profile={env.scoringProfile} />
                   </td>
                   <td>{env.storeHash}</td>
                   <td>{env.hasToken ? "set" : "missing"}</td>

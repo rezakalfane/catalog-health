@@ -173,6 +173,24 @@ const MIGRATIONS = [
   ALTER TABLE product_ai_analyses ADD COLUMN model_configuration_id TEXT;
   ALTER TABLE product_ai_analyses ADD COLUMN model_configuration_name TEXT;
   `,
+
+  // 11 — owner-scoped custom scoring profiles. Built-in profiles remain
+  // immutable code definitions; analyses retain complete profile snapshots.
+  `
+  CREATE TABLE scoring_profiles (
+    id                TEXT PRIMARY KEY,
+    user_id           TEXT NOT NULL,
+    label             TEXT NOT NULL,
+    description       TEXT NOT NULL DEFAULT '',
+    dimension_weights TEXT NOT NULL,
+    semantic_weight   REAL NOT NULL,
+    thresholds        TEXT NOT NULL,
+    revision          INTEGER NOT NULL DEFAULT 1,
+    created_at        TEXT NOT NULL,
+    updated_at        TEXT NOT NULL
+  );
+  CREATE INDEX idx_scoring_profiles_user ON scoring_profiles (user_id, created_at);
+  `,
 ];
 
 function migrate(db) {

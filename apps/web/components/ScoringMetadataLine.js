@@ -21,9 +21,9 @@ export default function ScoringMetadataLine({ metadata }) {
       <span className="scoring-meta-part">
         scoring engine {metadata.engineVersion || "unknown"}
       </span>
-      {profile.id && (
+      {(profile.label || profile.id) && (
         <span className="scoring-meta-part">
-          {profile.id} {profile.version || ""}
+          {profile.label || profile.id} {profile.version || ""}
         </span>
       )}
       {semantic.applied && (

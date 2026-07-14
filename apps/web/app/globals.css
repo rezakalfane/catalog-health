@@ -149,7 +149,7 @@ th, td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--line); }
 tr:last-child td { border-bottom: none; }
 
 label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; color: var(--ink-soft); }
-input, select {
+input, select, textarea {
   width: 100%;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--line);
@@ -158,6 +158,7 @@ input, select {
   background: #fff;
   margin-bottom: 0.85rem;
 }
+textarea { resize: vertical; }
 .inline-check { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; margin: 0 0 0.85rem; }
 .inline-check input { width: auto; margin: 0; }
 .form-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -589,6 +590,20 @@ a.progress-link:hover .progress-top { color: var(--signal); }
   font-size: 0.82rem;
   line-height: 1.45;
 }
+.profile-editor fieldset { margin: 1.2rem 0 0; padding: 0; border: 0; }
+.profile-editor legend { margin-bottom: 0.65rem; font-family: var(--font-display); font-size: 1rem; font-weight: 700; }
+.profile-editor-grid { display: grid; grid-template-columns: minmax(180px, 0.7fr) minmax(280px, 1.3fr); gap: 1rem; }
+.profile-description-field textarea { width: 100%; }
+.profile-value-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 0.7rem; }
+.profile-value-grid input { margin: 0; }
+.profile-total { margin: 0.55rem 0 0; font-size: 0.82rem; font-weight: 700; }
+.profile-total.valid { color: var(--grade-a); }
+.profile-total.invalid { color: var(--grade-f); }
+.profile-kind-badge { flex: 0 0 auto; padding: 0.25rem 0.48rem; border-radius: 999px; background: #eef0f5; color: var(--ink-soft); font-size: 0.72rem; font-weight: 750; }
+.profile-kind-badge.custom { background: var(--signal-soft); color: var(--signal); }
+.profile-id { max-width: 220px; overflow: hidden; text-overflow: ellipsis; font-size: 0.7rem; white-space: nowrap; }
+.profile-table-actions { white-space: nowrap; }
+.profile-table-actions button { margin: 0.1rem 0.2rem 0.1rem 0; }
 
 /* Scoring configuration snapshots ------------------------------------------ */
 .scoring-metadata-card .section-action-head { align-items: flex-start; }
@@ -758,6 +773,7 @@ button.ai-copy-button { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
   .ai-summary { flex-direction: column; }
   .ai-image-card-main { flex-direction: column; }
   .ai-product-card { flex-direction: column; }
+  .profile-editor-grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

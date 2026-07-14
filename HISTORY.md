@@ -846,3 +846,35 @@ group for application configuration.
   **Settings → Models**.
 - Added responsive nested-navigation styling and semantic navigation/group
   labels for keyboard and assistive-technology users.
+
+## 42. Custom scoring profile management — 2026-07-14
+
+> **Prompt:** Add a Profiles page under Settings where custom scoring profiles
+> can be added, edited, removed, and used by environments, analyses, and
+> recalculations; keep the four out-of-the-box profiles read-only.
+
+**Summary:** Scoring profiles are now an owner-scoped, reusable configuration
+surface rather than a fixed-only choice.
+
+- Added **Settings → Profiles** with the four built-in profiles listed first.
+  Their complete weights and thresholds can be opened in the editor, but every
+  value is protected and removal is unavailable.
+- Custom profiles are listed separately and support creation, editing, and
+  confirmed removal. The editor validates a 100% dimension total, semantic
+  weight, description/image/category/title thresholds, and related minimum /
+  maximum constraints.
+- Added SQLite migration 11 and authenticated, owner-scoped profile CRUD APIs.
+  Built-in profile mutation is rejected at the API layer as well as the UI.
+- Environment selectors, new-analysis context, and recalculation menus now use
+  both built-in and custom profiles. Every run resolves the full definition and
+  stores an immutable scoring-metadata snapshot.
+- Custom profile edits advance their version, allowing an older analysis to be
+  recalculated with a newer revision of the same profile. Removing a custom
+  profile moves affected environments to Balanced without changing historical
+  analyses.
+- Compact analysis headers show the saved profile name and version instead of
+  exposing the internal custom-profile UUID; the technical ID remains in the
+  detailed scoring metadata panel for traceability.
+- Added `npm run test_scoring_profiles` covering validation, CRUD, owner
+  isolation, environment usage, versioned recalculation, protected built-ins,
+  deletion fallback, and immutable history.

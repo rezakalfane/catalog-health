@@ -1,6 +1,5 @@
 import {
   createScoringMetadata,
-  getScoringProfile,
   rescoreCatalogRows,
   summarize,
 } from "@catalog-health/core";
@@ -9,6 +8,7 @@ import {
   createAnalysis,
   getAnalysis,
   getAnalysisRows,
+  getScoringProfileForUser,
   updateAnalysis,
 } from "./db.js";
 
@@ -30,13 +30,18 @@ export function recalculateAnalysis({ userId, sourceAnalysisId, profileId }) {
   }
 
   const sourceProfileId = source.scoringMetadata?.profile?.id;
-  if (sourceProfileId === profileId) {
+  const profile = getScoringProfileForUser(userId, profileId);
+  if (!profile) {
+    const error = new Error("Unknown scoring profile");
+    error.status = 400;
+    throw error;
+  }
+  if (sourceProfileId === profileId && source.scoringMetadata?.profile?.version === profile.version) {
     const error = new Error("Choose a different scoring profile");
     error.status = 400;
     throw error;
   }
 
-  const profile = getScoringProfile(profileId);
   const sourceRows = getAnalysisRows(userId, sourceAnalysisId);
   if (!sourceRows.length || sourceRows.some((row) => !row.details)) {
     const error = new Error(

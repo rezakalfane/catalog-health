@@ -66,7 +66,7 @@ export default async function Dashboard() {
                   <h2>
                     <Link href={`/environments/${env.id}`}>{env.name}</Link>
                   </h2>
-                  <ScoringProfileSubtitle profileId={env.scoringProfileId} />
+                  <ScoringProfileSubtitle profileId={env.scoringProfileId} profile={env.scoringProfile} />
                   <p className="muted">
                     {env.storeHash} ·{" "}
                     {latest
@@ -112,7 +112,10 @@ export default async function Dashboard() {
                       {env ? (
                         <>
                           <Link href={`/environments/${env.id}`}>{env.name}</Link>
-                          <ScoringProfileSubtitle profileId={env.scoringProfileId} />
+                          <ScoringProfileSubtitle
+                            profileId={a.scoringMetadata?.profile?.id || env.scoringProfileId}
+                            profile={a.scoringMetadata?.profile || env.scoringProfile}
+                          />
                         </>
                       ) : (
                         a.environmentId

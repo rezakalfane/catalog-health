@@ -9,6 +9,7 @@
     "test_pdf_export": "node --experimental-default-type=module scripts/test-pdf-export.mjs",
     "test_comparison_pdf_export": "node --experimental-default-type=module scripts/test-comparison-pdf-export.mjs",
     "test_scoring_metadata": "node --experimental-default-type=module scripts/test-scoring-metadata.mjs",
+    "test_scoring_profiles": "node --experimental-default-type=module scripts/test-scoring-profiles.mjs",
     "test_analysis_recalculation": "node --experimental-default-type=module scripts/test-analysis-recalculation.mjs",
     "test_product_ai_analysis": "node --experimental-default-type=module scripts/test-product-ai-analysis.mjs",
     "test_product_pdf_export": "node --experimental-default-type=module scripts/test-product-pdf-export.mjs",

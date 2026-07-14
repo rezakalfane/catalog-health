@@ -22,6 +22,7 @@ export default function AnalysisPage() {
   const [analysis, setAnalysis] = useState(null);
   const [envName, setEnvName] = useState("");
   const [envProfileId, setEnvProfileId] = useState("");
+  const [envProfile, setEnvProfile] = useState(null);
   const [comparisonAnalyses, setComparisonAnalyses] = useState([]);
   const [cancellingSemantic, setCancellingSemantic] = useState(false);
 
@@ -50,6 +51,7 @@ export default function AnalysisPage() {
       if (!env) return;
       setEnvName(env.name);
       setEnvProfileId(env.scoringProfileId || DEFAULT_SCORING_PROFILE_ID);
+      setEnvProfile(env.scoringProfile || null);
     });
   }, [environmentId]);
 
@@ -87,7 +89,11 @@ export default function AnalysisPage() {
               {analysis && <> · started {new Date(analysis.createdAt).toLocaleString()}</>}
             </span>
             {analysisProfileId && (
-              <ScoringProfileSubtitle as="span" profileId={analysisProfileId} />
+              <ScoringProfileSubtitle
+                as="span"
+                profileId={analysisProfileId}
+                profile={analysis?.scoringMetadata?.profile || envProfile}
+              />
             )}
             {status === "done" && analysis?.durationMs != null && (
               <span className="analysis-meta-line">
@@ -151,6 +157,7 @@ export default function AnalysisPage() {
                 currentProfileId={
                   analysis.scoringMetadata?.profile?.id || DEFAULT_SCORING_PROFILE_ID
                 }
+                currentProfileVersion={analysis.scoringMetadata?.profile?.version}
               />
             )}
             {analysis.sourceAnalysisId && (

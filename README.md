@@ -125,12 +125,19 @@ npm run dev
   ready model for each run. API keys remain encrypted at rest and write-only in
   the UI (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` environment fallbacks remain
   supported). Existing single-model settings are imported automatically.
+- **Settings → Profiles** — inspect the four protected built-in scoring
+  profiles or add, edit, and remove account-specific profiles with custom
+  dimension weights, semantic weight, and catalog thresholds. Custom profiles
+  are available to environments, new analyses, and stored-fact recalculations.
+  Each edit creates a new profile revision for comparison metadata; deleting a
+  profile reassigns its environments to Balanced while completed analyses keep
+  their immutable profile snapshot.
 
-Model-configuration persistence and migration have a dedicated integration
-test:
+Model and scoring-profile persistence have dedicated integration tests:
 
 ```bash
 npm run test_llm_models
+npm run test_scoring_profiles
 ```
 
 ### PDF export smoke test

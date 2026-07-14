@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { isScoringProfileId } from "@catalog-health/core/profiles";
 import { getApiUser } from "@/lib/auth-helpers";
 import { recalculateAnalysis } from "@/lib/analysis-recalculator";
-import { redactAnalysis } from "@/lib/db";
+import { getScoringProfileForUser, redactAnalysis } from "@/lib/db";
 
 export async function POST(request, { params }) {
   const user = await getApiUser();
@@ -10,7 +9,7 @@ export async function POST(request, { params }) {
 
   const { id } = await params;
   const body = await request.json().catch(() => ({}));
-  if (!isScoringProfileId(body.profileId)) {
+  if (!getScoringProfileForUser(user.id, body.profileId)) {
     return NextResponse.json({ error: "Unknown scoring profile" }, { status: 400 });
   }
 
