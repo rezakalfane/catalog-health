@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAnalysis, getAnalysisRows } from "@/lib/db";
 import { getApiUser } from "@/lib/auth-helpers";
+import { productRowsCsv } from "@/lib/product-csv";
+import { issueLabel } from "@/components/issue-info";
 
 /**
  * Full per-product results for one analysis, plus a category id -> name map
@@ -17,6 +19,19 @@ export async function GET(request, { params }) {
       { error: "This analysis has no per-product data (it predates per-product storage). Run a new analysis." },
       { status: 404 }
     );
+  }
+  const rows = getAnalysisRows(user.id, id);
+  if (new URL(request.url).searchParams.get("format") === "csv") {
+    const date = analysis.createdAt?.slice(0, 10) || "analysis";
+    const filename = `catalog-health-products-${date}-${analysis.id}.csv`;
+    const csv = `\uFEFF${productRowsCsv(rows, issueLabel)}`;
+    return new Response(csv, {
+      headers: {
+        "Content-Type": "text/csv;charset=utf-8",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
   }
   // Prefer the analysis's stored catalog metadata (has channel trees);
   // fall back to the summary rollup for analyses that predate it.
@@ -47,6 +62,6 @@ export async function GET(request, { params }) {
     treeChannels,
     channelNames,
     semanticJudge: analysis.catalog?.semanticJudge || null,
-    rows: getAnalysisRows(user.id, id),
+    rows,
   });
 }

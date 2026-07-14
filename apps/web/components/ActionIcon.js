@@ -4,6 +4,7 @@ const PATHS = {
   chevronDown: <path d="m7 10 5 5 5-5" />,
   compare: <path d="M4 7h11m0 0-3-3m3 3-3 3M20 17H9m0 0 3-3m-3 3 3 3" />,
   download: <path d="M12 4v10m0 0 4-4m-4 4-4-4M5 20h14" />,
+  fileText: <path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 12h6m-6 4h6" />,
   play: <path d="m8 5 11 7-11 7V5Z" />,
   refresh: <path d="M20 7v5h-5M4 17v-5h5m9.5-3A7 7 0 0 0 6 7l-2 5m2 3a7 7 0 0 0 12.5 2l1.5-5" />,
   table: <path d="M4 5h16v14H4V5Zm0 5h16M9 5v14" />,

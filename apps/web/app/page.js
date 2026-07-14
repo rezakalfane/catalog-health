@@ -7,6 +7,8 @@ import { formatDuration } from "@/lib/format";
 import SemanticBadge from "@/components/SemanticBadge";
 import ActionIcon from "@/components/ActionIcon";
 import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
+import AnalysisExportActions from "@/components/AnalysisExportActions";
+import DeleteAnalysisButton from "@/components/DeleteAnalysisButton";
 
 export const dynamic = "force-dynamic";
 
@@ -92,6 +94,7 @@ export default async function Dashboard() {
                 <th>Score</th>
                 <th>Grade</th>
                 <th>Duration</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -122,6 +125,12 @@ export default async function Dashboard() {
                     </td>
                     <td title={a.semanticMs != null ? `semantic ${formatDuration(a.semanticMs)}` : undefined}>
                       {formatDuration(a.durationMs)}
+                    </td>
+                    <td>
+                      <span className="analysis-history-actions">
+                        <AnalysisExportActions analysis={a} />
+                        <DeleteAnalysisButton analysisId={a.id} iconOnly />
+                      </span>
                     </td>
                   </tr>
                 );

@@ -171,6 +171,24 @@ button.delete-analysis-button.icon-only .action-icon {
   height: 0.85rem;
 }
 .delete-analysis-error { max-width: 16rem; }
+.analysis-history-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.analysis-history-action {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border-radius: 5px;
+  color: #fff;
+}
+.analysis-history-action.pdf { background: var(--signal); }
+.analysis-history-action.csv { background: var(--grade-a); }
+.analysis-history-action .action-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+}
 .action-icon {
   width: 1em;
   height: 1em;

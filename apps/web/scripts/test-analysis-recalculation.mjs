@@ -14,6 +14,8 @@ import {
   updateAnalysis,
 } from "../lib/db.js";
 import { getDb } from "../lib/sqlite.js";
+import { productRowsCsv } from "../lib/product-csv.js";
+import { issueLabel } from "../components/issue-info.js";
 
 const db = getDb();
 const fixtureId = `recalculation-test-${Date.now()}`;
@@ -64,6 +66,9 @@ try {
     assert.notEqual(persistedDerived.summary.overall, persistedSource.summary.overall);
     assert.equal(persistedSource.sourceAnalysisId, null);
     assert.equal(persistedSource.scoringMetadata.profile.id, "catalog-health-default");
+    const productCsv = productRowsCsv(derivedRows, issueLabel);
+    assert.equal(productCsv.split("\r\n").length, derivedRows.length + 1);
+    assert.match(productCsv, /^"Product ID","Product","SKU","Score","Grade"/);
 
     const deletion = deleteAnalysis(fixtureId, source.id);
     const derivedAfterSourceDeletion = getAnalysis(fixtureId, derived.id);
