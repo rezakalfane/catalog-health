@@ -8,6 +8,10 @@ import DimensionBars from "@/components/DimensionBars";
 import { ISSUE_INFO, issueLabel } from "@/components/issue-info";
 import { dimensionInfo } from "@/components/dimension-info";
 import { getAnalysisProducts, getEnvironment } from "@/lib/api-client";
+import ProductAiAnalysis, {
+  ProductAiAnalysisAction,
+  useProductAiAnalysis,
+} from "@/components/ProductAiAnalysis";
 
 // The three questions the semantic judge answers, in display order.
 const SEMANTIC_CRITERIA = [
@@ -22,6 +26,7 @@ export default function ProductDrilldownPage() {
   const [data, setData] = useState(null);
   const [storeHash, setStoreHash] = useState("");
   const [error, setError] = useState("");
+  const aiAnalysis = useProductAiAnalysis(id, productId);
 
   useEffect(() => {
     getAnalysisProducts(id)
@@ -143,6 +148,7 @@ export default function ProductDrilldownPage() {
           </p>
           </div>
         </div>
+        <ProductAiAnalysisAction state={aiAnalysis} />
       </div>
 
       <div className="grid">
@@ -397,6 +403,8 @@ export default function ProductDrilldownPage() {
           </>
         )}
       </div>
+
+      <ProductAiAnalysis state={aiAnalysis} />
     </>
   );
 }

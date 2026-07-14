@@ -132,6 +132,23 @@ const MIGRATIONS = [
   ALTER TABLE analyses ADD COLUMN source_analysis_id TEXT REFERENCES analyses(id) ON DELETE SET NULL;
   CREATE INDEX idx_analyses_source ON analyses (source_analysis_id);
   `,
+
+  // 9 — latest merchant-requested AI review for a product in an analysis.
+  // Kept separately from scoring facts: it is optional, comparatively large,
+  // and can be regenerated without mutating the immutable analysis snapshot.
+  `
+  CREATE TABLE product_ai_analyses (
+    analysis_id      TEXT    NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
+    product_id       INTEGER NOT NULL,
+    provider         TEXT    NOT NULL,
+    model            TEXT    NOT NULL,
+    source            TEXT    NOT NULL,
+    image_analysis   INTEGER NOT NULL DEFAULT 0,
+    result            TEXT    NOT NULL,
+    generated_at      TEXT    NOT NULL,
+    PRIMARY KEY (analysis_id, product_id)
+  );
+  `,
 ];
 
 function migrate(db) {

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import GradeLozenge from "@/components/GradeLozenge";
 import ProductThumb from "@/components/ProductThumb";
+import AiAnalyzedBadge from "@/components/AiAnalyzedBadge";
 import { issueLabel } from "@/components/issue-info";
 import { getAnalysisProducts } from "@/lib/api-client";
 import ActionIcon from "@/components/ActionIcon";
@@ -246,7 +247,10 @@ export default function ProductTablePage() {
                 <td>
                   <span className="prod-cell">
                     <ProductThumb src={r.details?.thumbnailUrl} alt="" />
-                    <Link href={`/analyses/${id}/products/${r.id}`}>{r.name || `#${r.id}`}</Link>
+                    <span className="product-name-with-ai">
+                      <Link href={`/analyses/${id}/products/${r.id}`}>{r.name || `#${r.id}`}</Link>
+                      <AiAnalyzedBadge analyzed={r.aiAnalyzed} />
+                    </span>
                   </span>
                 </td>
                 <td className="muted">{r.sku}</td>

@@ -7,6 +7,29 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feature/product-ai-analysis — 2026-07-14
+
+Rich on-demand product recommendations. Developed on
+`feature/product-ai-analysis`, merged into `main` (no-ff). HISTORY.md entry 36.
+
+Highlights:
+
+- Added an authenticated, persisted AI Analysis for each analysis/product,
+  generated with the Anthropic, OpenAI, or Ollama model selected in Settings.
+- Uses the current full BigCommerce product when available and falls back to
+  immutable analysis facts; outputs validated merchant-ready copy, derived
+  fields, placement, feed/SEO data, priorities, risks, and follow-up questions.
+- Added safe multimodal review for up to five BigCommerce CDN images, including
+  quality scores, hero selection, missing shots, alt text, and the exact
+  analyzed image thumbnail; unsupported vision input retries text-only.
+- Streams real generation stages into the running UI and persists the latest
+  completed review separately from scoring facts through SQLite migration 9.
+- Shows an accessible AI sparkle beside analyzed products in All Products, Top
+  Fixes, and comparison Product Changes, with report-specific comparison hints.
+- Added AI SDK provider adapters, raised the Node.js requirement to 20, and
+  introduced an integration test covering schemas, streaming, retrieval,
+  ownership, persistence, image binding, comparison flags, and cascade cleanup.
+
 ## feat/scoring-version-metadata — 2026-07-14
 
 Versioned scoring metadata, configuration comparison, and report exports.

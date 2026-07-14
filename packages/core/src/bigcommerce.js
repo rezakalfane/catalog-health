@@ -97,6 +97,17 @@ export async function fetchCatalog({ storeHash, token, onProgress }) {
   return { products, categories, trees, channels };
 }
 
+/** Fetch one current product with the same rich fields used by a catalog run. */
+export async function fetchProduct({ storeHash, token, productId }) {
+  const payload = await getPage(
+    storeHash,
+    token,
+    `/catalog/products/${encodeURIComponent(productId)}`,
+    { include: PRODUCT_INCLUDES }
+  );
+  return payload.data || null;
+}
+
 // ---------------------------------------------------------------------------
 // Demo catalog (deterministic, no credentials needed)
 // ---------------------------------------------------------------------------

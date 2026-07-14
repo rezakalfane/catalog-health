@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import GradeLozenge from "@/components/GradeLozenge";
 import ProductThumb from "@/components/ProductThumb";
+import AiAnalyzedBadge from "@/components/AiAnalyzedBadge";
 import { issueLabel } from "@/components/issue-info";
 import { compareAnalyses } from "@/lib/api-client";
 import ActionIcon from "@/components/ActionIcon";
@@ -457,9 +458,21 @@ function ComparePageInner() {
                         <span className="prod-cell">
                           <ProductThumb src={p.thumbnailUrl} alt="" />
                           <span>
-                            <Link href={`/analyses/${analysisId}/products/${p.id}`}>
-                              {p.name || `#${p.id}`}
-                            </Link>
+                            <span className="product-name-with-ai">
+                              <Link href={`/analyses/${analysisId}/products/${p.id}`}>
+                                {p.name || `#${p.id}`}
+                              </Link>
+                              <AiAnalyzedBadge
+                                analyzed={p.aiAnalyzed}
+                                title={
+                                  p.baseAiAnalyzed && p.targetAiAnalyzed
+                                    ? "AI analyzed in both reports"
+                                    : p.targetAiAnalyzed
+                                      ? "AI analyzed in the current report"
+                                      : "AI analyzed in the previous report"
+                                }
+                              />
+                            </span>
                             {p.sku && <div className="muted">{p.sku}</div>}
                           </span>
                         </span>

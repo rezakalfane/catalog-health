@@ -11,7 +11,8 @@
     "test_comparison_pdf_export": "npm run test_comparison_pdf_export --workspace @catalog-health/web",
     "test_scoring_metadata": "npm run test_scoring_metadata --workspace @catalog-health/web",
     "test_analysis_recalculation": "npm run test_analysis_recalculation --workspace @catalog-health/web",
+    "test_product_ai_analysis": "npm run test_product_ai_analysis --workspace @catalog-health/web",
     "cli": "node packages/cli/src/index.js"
   },
-  "engines": { "node": ">=18.18" }
+  "engines": { "node": ">=20" }
 }
