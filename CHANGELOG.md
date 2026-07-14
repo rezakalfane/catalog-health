@@ -7,6 +7,24 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/comparison-table-exports — 2026-07-14
+
+Comparison-table sorting and exports. Developed on
+`feat/comparison-table-exports`, merged into `main` (no-ff); merge hash
+backfilled next entry. HISTORY.md entry 33.
+
+Highlights:
+
+- Made every Product Changes column sortable, with score change descending as
+  the default and visible ascending/descending indicators.
+- Added an Excel-friendly CSV export containing every product matching the
+  current search/status filters in the active sort order.
+- Added an authenticated comparison PDF export with headline score, grade,
+  and product-count changes; dimension, issue, and category tables; and the
+  top 15 changed products ordered by score change descending.
+- Added `npm run test_comparison_pdf_export` for a representative multi-page
+  structural and visual smoke test.
+
 ## feat/analysis-comparison-picker — 2026-07-14
 
 Expanded analysis comparison selection. Developed on

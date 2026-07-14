@@ -309,6 +309,14 @@ th.sortable .sort-arrow { display: inline-block; width: 1em; font-size: 0.7em; m
 .filters input, .filters select { margin-bottom: 0.5rem; }
 
 /* Analysis comparison -------------------------------------------------------- */
+.section-action-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+.section-action-head h2 { margin-bottom: 0; }
 .compare-products th:nth-child(2),
 .compare-products th:nth-child(3),
 .compare-products th:nth-child(4),
