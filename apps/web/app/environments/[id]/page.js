@@ -21,6 +21,7 @@ import TopFixesTable from "@/components/TopFixesTable";
 import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
 import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
 import DeleteAnalysisButton from "@/components/DeleteAnalysisButton";
+import AnalysisExportActions from "@/components/AnalysisExportActions";
 
 export const dynamic = "force-dynamic";
 
@@ -251,7 +252,10 @@ export default async function EnvironmentDetail({ params }) {
                     {formatDuration(a.durationMs)}
                   </td>
                   <td>
-                    <DeleteAnalysisButton analysisId={a.id} iconOnly />
+                    <span className="analysis-history-actions">
+                      <AnalysisExportActions analysis={a} />
+                      <DeleteAnalysisButton analysisId={a.id} iconOnly />
+                    </span>
                   </td>
                 </tr>
               ))}

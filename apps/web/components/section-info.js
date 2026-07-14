@@ -126,7 +126,8 @@ export const sectionInfo = {
     <>
       <p>
         All completed analysis runs for this environment, newest first. Each
-        row is a full snapshot of the catalog&apos;s health at that moment.
+        row is a full snapshot of the catalog&apos;s health at that moment. The
+        actions export its PDF report or complete product CSV, or delete it.
       </p>
     </>
   ),

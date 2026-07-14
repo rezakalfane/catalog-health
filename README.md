@@ -68,8 +68,10 @@ npm run dev
   filtering, sortable columns, and filtered/sorted CSV export; analysis pages
   show up to 100 matches while environment overviews remain capped at 15.
   Environment analysis history includes the profile captured by each run and
-  a compact red trash action with confirmation for completed reports. A full
-  **Delete analysis** button is also available from the report itself.
+  compact actions for the PDF report, complete product CSV, and confirmed
+  deletion. A full **Delete analysis** button is also available from the
+  report itself. The Dashboard Recent analyses table provides the same blue
+  PDF, green full-product CSV, and red confirmed-delete actions.
 - **Analysis comparison** — from a completed analysis, choose any of the ten
   immediately preceding runs from the same environment. The picker shows each
   run's date, product count, score, grade, duration, and semantic-scoring tag.
@@ -295,6 +297,8 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
       back to its source for one-click comparison
 - [x] Delete completed analyses from history or the report, cascade stored
       product rows, preserve derived reports, and protect active runs
+- [x] Compact PDF, full-product CSV, and confirmed-delete actions in both the
+      Dashboard Recent analyses and environment Analysis history tables
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)
 - [x] Auth (Google SSO + dev login) and per-user multi-tenancy
