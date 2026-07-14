@@ -6,8 +6,10 @@ import {
   getAnalysisProduct,
   getEnvironment,
   getProductAiAnalysis,
-  getSettings,
-  redactLlmSettings,
+  getDefaultLlmModel,
+  getLlmModel,
+  listLlmModels,
+  redactLlmModel,
   saveProductAiAnalysis,
 } from "@/lib/db";
 import { analyzeProductWithAi } from "@/lib/product-ai-analysis";
@@ -112,6 +114,12 @@ async function ownedProduct(userId, id, productId) {
   return { analysis, row };
 }
 
+function modelOptions(userId) {
+  const models = listLlmModels(userId).map(redactLlmModel);
+  const defaultModel = models.find((model) => model.isDefault) || models[0] || null;
+  return { models, defaultModelId: defaultModel?.id || null };
+}
+
 export async function GET(_request, { params }) {
   const user = await getApiUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -120,11 +128,11 @@ export async function GET(_request, { params }) {
   if (!analysis || !row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({
     review: getProductAiAnalysis(user.id, id, productId),
-    llm: redactLlmSettings(getSettings(user.id)),
+    ...modelOptions(user.id),
   });
 }
 
-export async function POST(_request, { params }) {
+export async function POST(request, { params }) {
   const user = await getApiUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id, productId } = await params;
@@ -134,9 +142,12 @@ export async function POST(_request, { params }) {
     return NextResponse.json({ error: "AI Analysis is available after the analysis completes." }, { status: 409 });
   }
 
-  const settings = getSettings(user.id).llm || {};
-  const readiness = redactLlmSettings({ llm: settings });
-  if (!readiness.configured) {
+  const body = await request.json().catch(() => ({}));
+  const settings = body.modelConfigurationId
+    ? getLlmModel(user.id, body.modelConfigurationId)
+    : getDefaultLlmModel(user.id);
+  const readiness = redactLlmModel(settings);
+  if (!readiness?.configured) {
     return NextResponse.json(
       { error: "Configure and select an LLM model in Settings before running AI Analysis." },
       { status: 409 }
@@ -209,12 +220,14 @@ export async function POST(_request, { params }) {
           const review = saveProductAiAnalysis(user.id, id, productId, {
             provider: generated.provider,
             model: generated.model,
+            modelConfigurationId: settings.id,
+            modelConfigurationName: settings.name,
             source: source.source,
             imageAnalysis: generated.imageAnalysis,
             result: generated.result,
             generatedAt: new Date().toISOString(),
           });
-          send({ type: "result", review, llm: readiness });
+          send({ type: "result", review, ...modelOptions(user.id) });
         } catch (error) {
           console.error("Product AI analysis failed", error);
           send({ type: "error", error: error?.message || "AI Analysis failed." });

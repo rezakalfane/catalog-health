@@ -33,6 +33,8 @@ export function createScoringMetadata({
       provider: semanticJudge?.provider || null,
       model: semanticJudge?.model || null,
       judgeLabel: semanticJudge?.label || null,
+      configurationId: semanticJudge?.configurationId || null,
+      configurationName: semanticJudge?.configurationName || null,
     },
   };
 }

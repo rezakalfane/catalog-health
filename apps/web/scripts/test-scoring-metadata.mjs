@@ -109,8 +109,12 @@ assert.equal(
 const semanticOpenAi = createScoringMetadata({
   semanticRequested: true,
   semanticApplied: true,
-  semanticJudge: { provider: "openai", model: "model-a", label: "model-a (OpenAI)" },
+  semanticJudge: {
+    provider: "openai", model: "model-a", label: "model-a (OpenAI)",
+    configurationId: "config-a", configurationName: "Primary judge",
+  },
 });
+assert.equal(semanticOpenAi.semantic.configurationName, "Primary judge");
 const semanticAnthropic = createScoringMetadata({
   semanticRequested: true,
   semanticApplied: true,

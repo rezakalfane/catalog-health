@@ -11,7 +11,8 @@
     "test_scoring_metadata": "node --experimental-default-type=module scripts/test-scoring-metadata.mjs",
     "test_analysis_recalculation": "node --experimental-default-type=module scripts/test-analysis-recalculation.mjs",
     "test_product_ai_analysis": "node --experimental-default-type=module scripts/test-product-ai-analysis.mjs",
-    "test_product_pdf_export": "node --experimental-default-type=module scripts/test-product-pdf-export.mjs"
+    "test_product_pdf_export": "node --experimental-default-type=module scripts/test-product-pdf-export.mjs",
+    "test_llm_models": "node --experimental-default-type=module scripts/test-llm-models.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.96",

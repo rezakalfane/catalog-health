@@ -8,7 +8,8 @@ import { getProductAiAnalysis, runProductAiAnalysis } from "@/lib/api-client";
 
 export function useProductAiAnalysis(analysisId, productId) {
   const [review, setReview] = useState(null);
-  const [llm, setLlm] = useState(null);
+  const [models, setModels] = useState([]);
+  const [selectedModelId, setSelectedModelId] = useState("");
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [progress, setProgress] = useState(null);
@@ -21,7 +22,11 @@ export function useProductAiAnalysis(analysisId, productId) {
       .then((data) => {
         if (!active) return;
         setReview(data.review);
-        setLlm(data.llm);
+        const configured = (data.models || []).filter((model) => model.configured);
+        setModels(configured);
+        const reviewed = configured.find((model) => model.id === data.review?.modelConfigurationId);
+        const preferred = reviewed || configured.find((model) => model.id === data.defaultModelId) || configured[0];
+        setSelectedModelId(preferred?.id || "");
       })
       .catch((err) => active && setError(err.body?.error || "Could not load AI Analysis."))
       .finally(() => active && setLoading(false));
@@ -37,28 +42,63 @@ export function useProductAiAnalysis(analysisId, productId) {
     });
     document.getElementById("ai-analysis")?.scrollIntoView({ behavior: "smooth", block: "start" });
     try {
-      const data = await runProductAiAnalysis(analysisId, productId, setProgress);
+      const data = await runProductAiAnalysis(analysisId, productId, selectedModelId, setProgress);
       setReview(data.review);
-      setLlm(data.llm);
+      const configured = (data.models || []).filter((model) => model.configured);
+      setModels(configured);
+      setSelectedModelId(data.review?.modelConfigurationId || selectedModelId);
     } catch (err) {
       setError(err.body?.error || "AI Analysis failed. Please try again.");
     } finally {
       setRunning(false);
       setProgress(null);
     }
-  }, [analysisId, productId]);
+  }, [analysisId, productId, selectedModelId]);
 
-  return { review, llm, loading, running, progress, error, run };
+  return {
+    review,
+    models,
+    selectedModelId,
+    setSelectedModelId,
+    loading,
+    running,
+    progress,
+    error,
+    run,
+  };
+}
+
+function ModelSelect({ state, id }) {
+  if (!state.models.length) return null;
+  return (
+    <select
+      id={id}
+      className="ai-model-select"
+      aria-label="AI model"
+      value={state.selectedModelId}
+      onChange={(event) => state.setSelectedModelId(event.target.value)}
+      disabled={state.running}
+    >
+      {state.models.map((model) => (
+        <option key={model.id} value={model.id}>
+          {model.name} — {model.model}{model.isDefault ? " (default)" : ""}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 export function ProductAiAnalysisAction({ state }) {
-  const { review, llm, loading, running, run } = state;
-  const unavailable = !loading && llm && !llm.configured;
+  const { review, loading, running, run } = state;
+  const unavailable = !loading && !state.models.length;
   return (
-    <button type="button" onClick={run} disabled={loading || running || unavailable}>
-      <ActionIcon name="sparkle" />
-      {running ? "Analyzing…" : review ? "Refresh AI Analysis" : "AI Analysis"}
-    </button>
+    <div className="ai-action-controls">
+      <ModelSelect state={state} id="ai-model-top" />
+      <button type="button" onClick={run} disabled={loading || running || unavailable}>
+        <ActionIcon name="sparkle" />
+        {running ? "Analyzing…" : review ? "Refresh AI Analysis" : "AI Analysis"}
+      </button>
+    </div>
   );
 }
 
@@ -88,7 +128,7 @@ function CopyBlock({ label, text }) {
 
 function EmptyState({ state }) {
   if (state.loading) return <p className="muted">Loading saved AI Analysis…</p>;
-  if (state.llm && !state.llm.configured) {
+  if (!state.models.length) {
     return (
       <div className="ai-empty">
         <p>Select a provider and model to generate a product-specific review.</p>
@@ -102,10 +142,13 @@ function EmptyState({ state }) {
         Generate merchant-ready copy, catalog fields, placement, feed values,
         conversion ideas, and—when the model supports vision—an image review.
       </p>
-      <button type="button" onClick={state.run} disabled={state.running}>
-        <ActionIcon name="sparkle" />
-        {state.running ? "Analyzing product…" : "Run AI Analysis"}
-      </button>
+      <div className="ai-action-controls">
+        <ModelSelect state={state} id="ai-model-empty" />
+        <button type="button" onClick={state.run} disabled={state.running}>
+          <ActionIcon name="sparkle" />
+          {state.running ? "Analyzing product…" : "Run AI Analysis"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -124,10 +167,13 @@ export default function ProductAiAnalysis({ state }) {
           </p>
         </div>
         {review && (
-          <button type="button" className="secondary" onClick={state.run} disabled={state.running}>
-            <ActionIcon name="refresh" />
-            {state.running ? "Analyzing…" : "Refresh"}
-          </button>
+          <div className="ai-action-controls">
+            <ModelSelect state={state} id="ai-model-section" />
+            <button type="button" className="secondary" onClick={state.run} disabled={state.running || !state.models.length}>
+              <ActionIcon name="refresh" />
+              {state.running ? "Analyzing…" : "Refresh"}
+            </button>
+          </div>
         )}
       </div>
 
@@ -146,6 +192,7 @@ export default function ProductAiAnalysis({ state }) {
       {!result ? <EmptyState state={state} /> : (
         <div className="ai-results">
           <div className="ai-review-meta">
+            {review.modelConfigurationName && <Pill>{review.modelConfigurationName}</Pill>}
             <Pill>{review.provider}</Pill>
             <Pill>{review.model}</Pill>
             <Pill>{review.source}</Pill>

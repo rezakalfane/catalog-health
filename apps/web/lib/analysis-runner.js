@@ -22,7 +22,6 @@ import {
   createAnalysis,
   updateAnalysis,
   listRunningAnalysesAllUsers,
-  getSettings,
 } from "@/lib/db";
 
 // Survives dev-mode module re-evaluation; scoped to this process by design.
@@ -59,7 +58,7 @@ export function reconcileInterruptedAnalyses() {
  * Create the analysis record and kick off the run in the background.
  * Returns immediately with the (running) record.
  */
-export function startAnalysisRun({ userId, environment, demo, semantic }) {
+export function startAnalysisRun({ userId, environment, demo, semantic, semanticModel = null }) {
   const scoringProfile = getScoringProfile(environment?.scoringProfileId);
   const analysis = createAnalysis({
     userId,
@@ -69,11 +68,18 @@ export function startAnalysisRun({ userId, environment, demo, semantic }) {
     progress: { percent: 0, stage: "fetch", label: "Starting…", detail: null },
     scoringMetadata: createScoringMetadata({
       semanticRequested: semantic,
+      semanticJudge: semanticModel ? {
+        provider: semanticModel.provider,
+        model: semanticModel.model,
+        label: semanticModel.name,
+        configurationId: semanticModel.id,
+        configurationName: semanticModel.name,
+      } : null,
       profile: scoringProfile,
     }),
   });
   activeRuns.add(analysis.id);
-  execute(analysis.id, { userId, environment, demo, semantic, scoringProfile })
+  execute(analysis.id, { userId, environment, demo, semantic, semanticModel, scoringProfile })
     .catch((err) => {
       updateAnalysis(analysis.id, {
         status: "failed",
@@ -93,6 +99,7 @@ async function execute(analysisId, {
   environment,
   demo,
   semantic,
+  semanticModel,
   scoringProfile,
 }) {
   const startedAt = Date.now();
@@ -152,12 +159,14 @@ async function execute(analysisId, {
   if (semantic) {
     const semStart = Date.now();
     try {
-      const judge = createJudge(demo ? { provider: "demo" } : getSettings(userId).llm);
-      semanticJudge = judge.label;
+      const judge = createJudge(demo ? { provider: "demo" } : semanticModel);
+      semanticJudge = demo ? judge.label : `${semanticModel.name} · ${judge.label}`;
       semanticJudgeMetadata = {
         provider: judge.provider,
         model: judge.model,
-        label: judge.label,
+        label: semanticJudge,
+        configurationId: semanticModel?.id || null,
+        configurationName: semanticModel?.name || null,
       };
       setProgress(64, "semantic", "Judging descriptions…", judge.label);
       const verdicts = await judgeCatalog(products, {

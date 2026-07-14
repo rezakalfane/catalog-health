@@ -277,6 +277,7 @@ function scoringMetadataEntries(metadata) {
     ["Semantic scoring", "Score weight", percent(profile.semanticWeight)],
     ["Semantic scoring", "Prompt version", semantic.promptVersion],
     ["Semantic scoring", "Provider", semantic.provider],
+    ["Semantic scoring", "Model configuration", semantic.configurationName],
     ["Semantic scoring", "Model", semantic.model],
     ["Semantic scoring", "Judge", semantic.judgeLabel],
   ];
@@ -805,7 +806,12 @@ function productDetailRows(product) {
 function aiMetaRows(aiReview) {
   return [
     { setting: "Provider", value: aiReview.provider },
-    { setting: "Model", value: aiReview.model },
+    {
+      setting: "Model",
+      value: aiReview.modelConfigurationName
+        ? `${aiReview.modelConfigurationName} - ${aiReview.model}`
+        : aiReview.model,
+    },
     { setting: "Product source", value: aiReview.source },
     { setting: "Generated", value: `${formatDate(aiReview.generatedAt)} UTC` },
     { setting: "Visual analysis", value: aiReview.imageAnalysis ? "Applied" : "Not applied" },

@@ -5,6 +5,9 @@ import {
   analysisStatus,
   findRunningAnalysis,
   redactAnalysis,
+  getDefaultLlmModel,
+  getLlmModel,
+  redactLlmModel,
 } from "@/lib/db";
 import {
   startAnalysisRun,
@@ -43,6 +46,19 @@ export async function POST(request) {
     }
   }
 
+  let semanticModel = null;
+  if (body?.semantic && !body?.demo) {
+    semanticModel = body.semanticModelId
+      ? getLlmModel(user.id, body.semanticModelId)
+      : getDefaultLlmModel(user.id);
+    if (!semanticModel) {
+      return NextResponse.json({ error: "Choose a configured semantic model." }, { status: 400 });
+    }
+    if (!redactLlmModel(semanticModel).configured) {
+      return NextResponse.json({ error: `Model configuration “${semanticModel.name}” is not ready.` }, { status: 400 });
+    }
+  }
+
   // One run at a time per environment — point the client at the existing one.
   const existing = findRunningAnalysis(user.id, environment ? environment.id : "demo");
   if (existing) {
@@ -57,6 +73,7 @@ export async function POST(request) {
     environment,
     demo: Boolean(body?.demo),
     semantic: Boolean(body?.semantic),
+    semanticModel,
   });
   return NextResponse.json(analysis, { status: 202 });
 }

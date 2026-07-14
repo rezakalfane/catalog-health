@@ -98,6 +98,8 @@ const pdf = await createReportPdf({
         provider: "anthropic",
         model: "claude-test-model",
         label: "claude-test-model",
+        configurationId: "semantic-judge",
+        configurationName: "Primary semantic judge",
       },
     }),
     summary,
