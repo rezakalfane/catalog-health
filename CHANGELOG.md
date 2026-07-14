@@ -7,6 +7,23 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/top-fixes-table-controls — 2026-07-14
+
+Interactive Top Fixes table and export. Developed on
+`feat/top-fixes-table-controls`, merged into `main` (no-ff); merge hash
+backfilled next entry. HISTORY.md entry 34.
+
+Highlights:
+
+- Added product/SKU search, grade filtering, and sortable Product, SKU, Score,
+  Grade, Impact, and Issues columns to Top Fixes.
+- Added a top-right CSV action that exports every current match in the active
+  sort order, using the same Excel-friendly format as All Products.
+- Analysis reports show up to 100 matching products; environment overview
+  pages retain a compact 15-row limit.
+- Extracted the product CSV serializer so both export locations share column,
+  escaping, BOM, and line-ending behavior.
+
 ## feat/comparison-table-exports — 2026-07-14
 
 Comparison-table sorting and exports. Developed on

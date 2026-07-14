@@ -64,7 +64,9 @@ npm run dev
   run advances) and can navigate away and come back at any time.
 - **Dashboard / environment pages** — latest grade, score sparkline over
   time, dimension breakdown, most common issues, weakest categories, and the
-  impact-weighted top-fix list.
+  impact-weighted top-fix list. Top fixes support product/SKU search, grade
+  filtering, sortable columns, and filtered/sorted CSV export; analysis pages
+  show up to 100 matches while environment overviews remain capped at 15.
 - **Analysis comparison** — from a completed analysis, choose any of the ten
   immediately preceding runs from the same environment. The picker shows each
   run's date, product count, score, grade, duration, and semantic-scoring tag.

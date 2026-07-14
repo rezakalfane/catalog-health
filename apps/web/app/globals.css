@@ -308,6 +308,8 @@ th.sortable .sort-arrow { display: inline-block; width: 1em; font-size: 0.7em; m
 }
 .filters input, .filters select { margin-bottom: 0.5rem; }
 
+.top-fixes-filters { grid-template-columns: minmax(220px, 2fr) minmax(140px, 1fr); }
+
 /* Analysis comparison -------------------------------------------------------- */
 .section-action-head {
   display: flex;
