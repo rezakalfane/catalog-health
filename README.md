@@ -65,10 +65,11 @@ npm run dev
 - **Dashboard / environment pages** — latest grade, score sparkline over
   time, dimension breakdown, most common issues, weakest categories, and the
   impact-weighted top-fix list.
-- **Analysis comparison** — from a completed analysis, compare it with the
-  previous run from the same environment: score/grade/product-count deltas,
-  dimension shifts, issue and category changes, and product-by-product
-  resolved/new issue details.
+- **Analysis comparison** — from a completed analysis, choose any of the ten
+  immediately preceding runs from the same environment. The picker shows each
+  run's date, product count, score, grade, duration, and semantic-scoring tag.
+  Comparisons include score/grade/product-count deltas, dimension shifts,
+  issue and category changes, and product-by-product resolved/new issue details.
 - **PDF report export** — download a completed analysis as a polished A4
   report with headline statistics, grade and dimension charts, common issues,
   weakest categories, and the ten highest-impact fixes. Filenames include the

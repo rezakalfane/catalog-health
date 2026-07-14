@@ -7,6 +7,20 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/analysis-comparison-picker — 2026-07-14
+
+Expanded analysis comparison selection. Developed on
+`feat/analysis-comparison-picker`, merged into `main` (no-ff); merge hash
+backfilled next entry. HISTORY.md entry 32.
+
+Highlights:
+
+- Replaced the single "Compare with previous" link with a dropdown picker for
+  up to ten preceding completed analyses from the same environment.
+- Each option mirrors the analysis-history details: date, semantic-scoring
+  badge, product count, score, grade, and duration.
+- Added outside-click and Escape dismissal plus accessible menu semantics.
+
 ## feat/report-pdf-export — 2026-07-13
 
 Completed-analysis PDF export. Developed on `feat/report-pdf-export`, merged

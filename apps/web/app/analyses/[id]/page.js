@@ -8,13 +8,14 @@ import { formatDuration } from "@/lib/format";
 import { getEnvironment, listAnalyses, skipSemantic } from "@/lib/api-client";
 import SemanticBadge from "@/components/SemanticBadge";
 import ActionIcon from "@/components/ActionIcon";
+import CompareAnalysisMenu from "@/components/CompareAnalysisMenu";
 
 export default function AnalysisPage() {
   const { id } = useParams();
   // Fed by AnalysisLiveReport's polling — this page only renders the header.
   const [analysis, setAnalysis] = useState(null);
   const [envName, setEnvName] = useState("");
-  const [previousAnalysisId, setPreviousAnalysisId] = useState(null);
+  const [comparisonAnalyses, setComparisonAnalyses] = useState([]);
   const [cancellingSemantic, setCancellingSemantic] = useState(false);
 
   async function cancelSemantic() {
@@ -41,12 +42,22 @@ export default function AnalysisPage() {
 
   useEffect(() => {
     if (!analysis || status !== "done") return;
+    let ignore = false;
+
     listAnalyses({ environmentId: analysis.environmentId, status: "done" })
       .then((analyses) => {
         const currentIndex = analyses.findIndex((a) => a.id === analysis.id);
-        setPreviousAnalysisId(currentIndex >= 0 ? analyses[currentIndex + 1]?.id || null : null);
+        if (!ignore) {
+          setComparisonAnalyses(
+            currentIndex >= 0 ? analyses.slice(currentIndex + 1, currentIndex + 11) : []
+          );
+        }
       })
-      .catch(() => setPreviousAnalysisId(null));
+      .catch(() => !ignore && setComparisonAnalyses([]));
+
+    return () => {
+      ignore = true;
+    };
   }, [analysis, status]);
 
   return (
@@ -109,15 +120,7 @@ export default function AnalysisPage() {
               <ActionIcon name="download" />
               Export as PDF
             </a>
-            {previousAnalysisId && (
-              <Link
-                className="btn secondary"
-                href={`/analyses/compare?base=${previousAnalysisId}&target=${id}`}
-              >
-                <ActionIcon name="compare" />
-                Compare with previous
-              </Link>
-            )}
+            <CompareAnalysisMenu analysisId={id} analyses={comparisonAnalyses} />
             {analysis.hasRows && (
               <Link className="btn secondary" href={`/analyses/${id}/products`}>
                 <ActionIcon name="table" />
