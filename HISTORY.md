@@ -613,3 +613,34 @@ history picker.
 - The existing authenticated comparison API and report page remain unchanged.
 
 Verified with `npm run build`.
+
+## 33. Sort and export comparison product changes — 2026-07-14
+
+> **Prompts:** Make the Product Changes table sortable, including by score
+> change. → Add an "Export as CSV" button using the current filter and sort. →
+> Add a comparison "Export as PDF" action containing the overall score, grade,
+> and product-count changes; dimension, issue, category, and top 15 changed
+> product sections. → Perfect, update docs, branch, commit, and merge.
+
+**Summary:** Made analysis comparisons easier to investigate, share, and
+archive.
+
+- Every Product Changes column is sortable. Score change descending is the
+  initial order; subsequent header clicks toggle direction, with product-name
+  tie-breaking for stable results.
+- The section-level CSV action exports all rows matching the current search
+  and status filters in the active sort order, independent of the 100-row UI
+  display cap. It includes previous/current scores, grades, issue counts,
+  deltas, and resolved/new issue labels in an Excel-friendly format.
+- The comparison header now includes "Export as PDF" before the back action.
+  The authenticated route applies the same ownership, completion, and
+  same-environment validation as the JSON comparison endpoint.
+- The paginated A4 PDF contains headline changes, semantic-formula warning
+  when required, dimension changes, the top 20 issue changes, the top 15
+  category changes, and the top 15 `changed` products ordered by score change
+  descending.
+- Added `npm run test_comparison_pdf_export`, which structurally validates a
+  representative report and writes it to the ignored `tmp/pdfs/` directory.
+
+Verified with the comparison PDF smoke test, three-page rendered visual
+inspection, and `npm run build`.

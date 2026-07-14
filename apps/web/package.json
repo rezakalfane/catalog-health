@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test_pdf_export": "node --experimental-default-type=module scripts/test-pdf-export.mjs"
+    "test_pdf_export": "node --experimental-default-type=module scripts/test-pdf-export.mjs",
+    "test_comparison_pdf_export": "node --experimental-default-type=module scripts/test-comparison-pdf-export.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

@@ -9,6 +9,120 @@ import { issueLabel } from "@/components/issue-info";
 import { compareAnalyses } from "@/lib/api-client";
 import ActionIcon from "@/components/ActionIcon";
 
+const STATUS_RANK = { changed: 0, added: 1, removed: 2, unchanged: 3 };
+const GRADE_RANK = { A: 0, B: 1, C: 2, D: 3, F: 4 };
+
+// `dir` is the direction applied when a column is selected for the first time.
+const PRODUCT_COLUMNS = [
+  {
+    key: "product",
+    label: "Product",
+    cmp: (a, b) => String(a.name || "").localeCompare(String(b.name || "")),
+    dir: "asc",
+  },
+  {
+    key: "status",
+    label: "Status",
+    cmp: (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status],
+    dir: "asc",
+  },
+  {
+    key: "scoreDelta",
+    label: "Score",
+    cmp: (a, b) => a.scoreDelta - b.scoreDelta,
+    dir: "desc",
+  },
+  {
+    key: "grade",
+    label: "Grade",
+    cmp: (a, b) =>
+      (GRADE_RANK[a.targetGrade || a.baseGrade] ?? 99) -
+      (GRADE_RANK[b.targetGrade || b.baseGrade] ?? 99),
+    dir: "asc",
+  },
+  {
+    key: "issueDelta",
+    label: "Issues",
+    cmp: (a, b) => a.issueDelta - b.issueDelta,
+    dir: "desc",
+  },
+  {
+    key: "resolvedIssues",
+    label: "Resolved",
+    cmp: (a, b) => a.resolvedIssues.length - b.resolvedIssues.length,
+    dir: "desc",
+  },
+  {
+    key: "addedIssues",
+    label: "New issues",
+    cmp: (a, b) => a.addedIssues.length - b.addedIssues.length,
+    dir: "desc",
+  },
+];
+
+const PRODUCT_CHANGE_CSV_HEADERS = [
+  "Product ID",
+  "Product",
+  "SKU",
+  "Status",
+  "Previous score",
+  "Current score",
+  "Score change",
+  "Previous grade",
+  "Current grade",
+  "Previous issue count",
+  "Current issue count",
+  "Issue count change",
+  "Resolved issues",
+  "New issues",
+];
+
+function csvCell(value) {
+  const text = value == null ? "" : String(value);
+  const safe = /^[=+\-@]/.test(text) ? `'${text}` : text;
+  return `"${safe.replaceAll('"', '""')}"`;
+}
+
+function productChangesCsv(rows) {
+  return [
+    PRODUCT_CHANGE_CSV_HEADERS.map(csvCell).join(","),
+    ...rows.map((row) =>
+      [
+        row.id,
+        row.name || `#${row.id}`,
+        row.sku,
+        row.status,
+        row.baseScore,
+        row.targetScore,
+        row.scoreDelta,
+        row.baseGrade,
+        row.targetGrade,
+        row.baseIssues,
+        row.targetIssues,
+        row.issueDelta,
+        row.resolvedIssues.map(issueLabel).join("; "),
+        row.addedIssues.map(issueLabel).join("; "),
+      ]
+        .map(csvCell)
+        .join(",")
+    ),
+  ].join("\r\n");
+}
+
+function downloadProductChangesCsv(filename, rows) {
+  const blob = new Blob([`\uFEFF${productChangesCsv(rows)}`], {
+    type: "text/csv;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 function Delta({ value, lowerIsBetter = false }) {
   const n = Number(value || 0);
   const good = lowerIsBetter ? n < 0 : n > 0;
@@ -35,6 +149,17 @@ function ComparePageInner() {
   const [error, setError] = useState("");
   const [productStatus, setProductStatus] = useState("changed");
   const [productSearch, setProductSearch] = useState("");
+  const [productSortCol, setProductSortCol] = useState("scoreDelta");
+  const [productSortDir, setProductSortDir] = useState("desc");
+
+  function sortProductsBy(key) {
+    if (key === productSortCol) {
+      setProductSortDir((direction) => direction === "asc" ? "desc" : "asc");
+      return;
+    }
+    setProductSortCol(key);
+    setProductSortDir(PRODUCT_COLUMNS.find((column) => column.key === key).dir);
+  }
 
   useEffect(() => {
     if (!baseId || !targetId) {
@@ -48,14 +173,29 @@ function ComparePageInner() {
 
   const productRows = useMemo(() => {
     const q = productSearch.trim().toLowerCase();
-    return (data?.products || []).filter((p) => {
-      if (productStatus !== "all" && p.status !== productStatus) return false;
-      if (q && !String(p.name || "").toLowerCase().includes(q) && !String(p.sku || "").toLowerCase().includes(q)) {
-        return false;
-      }
-      return true;
-    });
-  }, [data, productSearch, productStatus]);
+    const column = PRODUCT_COLUMNS.find((candidate) => candidate.key === productSortCol);
+    const sign = productSortDir === "asc" ? 1 : -1;
+    return (data?.products || [])
+      .filter((p) => {
+        if (productStatus !== "all" && p.status !== productStatus) return false;
+        if (q && !String(p.name || "").toLowerCase().includes(q) && !String(p.sku || "").toLowerCase().includes(q)) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => sign * column.cmp(a, b) || String(a.name || "").localeCompare(String(b.name || "")));
+  }, [data, productSearch, productSortCol, productSortDir, productStatus]);
+
+  function exportProductChanges() {
+    if (!data || productRows.length === 0) return;
+    const date = data.target.createdAt?.slice(0, 10) || "comparison";
+    const base = data.base.id.slice(0, 8);
+    const target = data.target.id.slice(0, 8);
+    downloadProductChangesCsv(
+      `catalog-health-product-changes-${date}-${base}-to-${target}.csv`,
+      productRows
+    );
+  }
 
   if (error) {
     return (
@@ -98,10 +238,19 @@ function ComparePageInner() {
             <Link href={`/analyses/${data.target.id}`}>{targetDate}</Link>
           </p>
         </div>
-        <Link className="btn" href={`/analyses/${data.target.id}`}>
-          <ActionIcon name="arrowLeft" />
-          Back to current analysis
-        </Link>
+        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+          <a
+            className="btn secondary"
+            href={`/api/analyses/compare/pdf?base=${data.base.id}&target=${data.target.id}`}
+          >
+            <ActionIcon name="download" />
+            Export as PDF
+          </a>
+          <Link className="btn" href={`/analyses/${data.target.id}`}>
+            <ActionIcon name="arrowLeft" />
+            Back to current analysis
+          </Link>
+        </div>
       </div>
 
       {!data.summary.semanticComparable && (
@@ -214,7 +363,20 @@ function ComparePageInner() {
       </div>
 
       <div className="card">
-        <h2>Product changes</h2>
+        <div className="section-action-head">
+          <h2>Product changes</h2>
+          {data.products.length > 0 && (
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={exportProductChanges}
+              disabled={productRows.length === 0}
+            >
+              <ActionIcon name="download" />
+              Export as CSV
+            </button>
+          )}
+        </div>
         {data.products.length === 0 ? (
           <p className="muted">
             Product-level comparison is unavailable because one of these analyses predates per-product storage.
@@ -252,13 +414,28 @@ function ComparePageInner() {
             <table className="compare-products">
               <thead>
                 <tr>
-                  <th>Product</th>
-                  <th>Status</th>
-                  <th>Score</th>
-                  <th>Grade</th>
-                  <th>Issues</th>
-                  <th>Resolved</th>
-                  <th>New issues</th>
+                  {PRODUCT_COLUMNS.map((column) => (
+                    <th
+                      key={column.key}
+                      className="sortable"
+                      onClick={() => sortProductsBy(column.key)}
+                      aria-sort={
+                        productSortCol === column.key
+                          ? productSortDir === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : undefined
+                      }
+                      title={column.key === "scoreDelta" ? "Sort by score change" : undefined}
+                    >
+                      {column.label}
+                      <span className="sort-arrow">
+                        {productSortCol === column.key
+                          ? productSortDir === "asc" ? "▲" : "▼"
+                          : ""}
+                      </span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>

@@ -69,7 +69,9 @@ npm run dev
   immediately preceding runs from the same environment. The picker shows each
   run's date, product count, score, grade, duration, and semantic-scoring tag.
   Comparisons include score/grade/product-count deltas, dimension shifts,
-  issue and category changes, and product-by-product resolved/new issue details.
+  issue and category changes, and sortable product-by-product resolved/new
+  issue details. Export the current filtered/sorted product changes as CSV or
+  download the complete comparison summary as a paginated PDF.
 - **PDF report export** — download a completed analysis as a polished A4
   report with headline statistics, grade and dimension charts, common issues,
   weakest categories, and the ten highest-impact fixes. Filenames include the
@@ -95,6 +97,15 @@ npm run test_pdf_export
 This generates a representative two-page report, validates its PDF structure,
 and leaves the ignored artifact at `tmp/pdfs/catalog-health-test.pdf` for
 optional visual inspection.
+
+Comparison PDFs have their own representative smoke test:
+
+```bash
+npm run test_comparison_pdf_export
+```
+
+It generates and validates a multi-page comparison report at
+`tmp/pdfs/catalog-health-comparison-test.pdf`.
 
 ## The five scoring dimensions
 
