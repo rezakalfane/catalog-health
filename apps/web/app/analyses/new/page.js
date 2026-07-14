@@ -14,7 +14,8 @@ function NewAnalysisForm() {
   const [selected, setSelected] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
-  const [llm, setLlm] = useState(null);
+  const [models, setModels] = useState([]);
+  const [semanticModelId, setSemanticModelId] = useState("");
   const [semantic, setSemantic] = useState(true);
   const selectedEnvironment = environments.find((env) => env.id === selected);
 
@@ -25,7 +26,12 @@ function NewAnalysisForm() {
       const preselected = envs.find((env) => env.id === preselectedEnv);
       setSelected(preselected ? preselected.id : envs[0].id);
     });
-    getSettings().then(({ llm }) => setLlm(llm));
+    getSettings().then(({ models = [], defaultModelId }) => {
+      const configured = models.filter((model) => model.configured);
+      setModels(configured);
+      const preferred = configured.find((model) => model.id === defaultModelId) || configured[0];
+      setSemanticModelId(preferred?.id || "");
+    });
   }, [preselectedEnv]);
 
   async function run(demo = false) {
@@ -35,7 +41,11 @@ function NewAnalysisForm() {
       const body = await createAnalysis(
         demo
           ? { demo: true, semantic }
-          : { environmentId: selected, semantic: semantic && Boolean(llm?.configured) }
+          : {
+              environmentId: selected,
+              semantic: semantic && Boolean(semanticModelId),
+              semanticModelId: semantic && semanticModelId ? semanticModelId : undefined,
+            }
       );
       router.push(`/analyses/${body.id}`);
     } catch (err) {
@@ -88,21 +98,33 @@ function NewAnalysisForm() {
                 description
               />
             )}
-            {llm?.configured ? (
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 400 }}>
-                <input
-                  type="checkbox"
-                  checked={semantic}
-                  onChange={(e) => setSemantic(e.target.checked)}
-                  style={{ width: "auto", margin: 0 }}
-                />
-                Include semantic scoring — {llm.model}
-                {llm.provider === "ollama"
-                  ? " via Ollama (free, local)"
-                  : llm.provider === "openai"
-                    ? " via the OpenAI API"
-                    : " via the Claude API"}
-              </label>
+            {models.length ? (
+              <div className="semantic-model-picker">
+                <label className="inline-check">
+                  <input
+                    type="checkbox"
+                    checked={semantic}
+                    onChange={(event) => setSemantic(event.target.checked)}
+                  />
+                  Include semantic scoring
+                </label>
+                {semantic && (
+                  <>
+                    <label htmlFor="semantic-model">Semantic model</label>
+                    <select
+                      id="semantic-model"
+                      value={semanticModelId}
+                      onChange={(event) => setSemanticModelId(event.target.value)}
+                    >
+                      {models.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name} — {model.model}{model.isDefault ? " (default)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
+              </div>
             ) : (
               <p className="muted">
                 Semantic scoring (LLM judges description quality) is available

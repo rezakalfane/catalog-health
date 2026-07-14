@@ -72,14 +72,26 @@ try {
 }
 
 const progressEvents = [];
-const streamedReview = { provider: "openai", model: "gpt-test", result: validResult };
+const streamedReview = {
+  provider: "openai",
+  model: "gpt-test",
+  modelConfigurationId: "model-config-1",
+  modelConfigurationName: "Catalog reviewer",
+  result: validResult,
+};
 globalThis.fetch = async (url, options) => {
   assert.match(String(url), /\/api\/analyses\/analysis-1\/products\/42\/ai-analysis$/);
   assert.equal(options.method, "POST");
+  assert.deepEqual(JSON.parse(options.body), { modelConfigurationId: "model-config-1" });
   const payload = [
     JSON.stringify({ type: "progress", step: "Loading product data", detail: "Loading." }),
     JSON.stringify({ type: "progress", step: "Generating recommendations", detail: "Generating." }),
-    JSON.stringify({ type: "result", review: streamedReview, llm: { configured: true } }),
+    JSON.stringify({
+      type: "result",
+      review: streamedReview,
+      models: [{ id: "model-config-1", configured: true }],
+      defaultModelId: "model-config-1",
+    }),
     "",
   ].join("\n");
   const splitAt = payload.indexOf("Generating") + 4;
@@ -95,6 +107,7 @@ try {
   const streamed = await runProductAiAnalysis(
     "analysis-1",
     42,
+    "model-config-1",
     (progress) => progressEvents.push(progress)
   );
   assert.deepEqual(progressEvents.map((item) => item.step), [
@@ -102,7 +115,8 @@ try {
     "Generating recommendations",
   ]);
   assert.deepEqual(streamed.review, streamedReview);
-  assert.equal(streamed.llm.configured, true);
+  assert.equal(streamed.models[0].configured, true);
+  assert.equal(streamed.defaultModelId, "model-config-1");
 } finally {
   globalThis.fetch = originalFetch;
 }
@@ -117,9 +131,11 @@ try {
 
     const saved = saveProductAiAnalysis(fixtureId, analysis.id, 42, {
       provider: "openai", model: "gpt-test", source: "analysis snapshot",
+      modelConfigurationId: "model-config-1", modelConfigurationName: "Catalog reviewer",
       imageAnalysis: false, result: validResult, generatedAt: "2026-07-14T10:00:00.000Z",
     });
     assert.equal(saved.model, "gpt-test");
+    assert.equal(saved.modelConfigurationName, "Catalog reviewer");
     assert.deepEqual(getProductAiAnalysis(fixtureId, analysis.id, 42).result, validResult);
     const analyzedRow = getAnalysisRows(fixtureId, analysis.id)[0];
     assert.equal(analyzedRow.aiAnalyzed, true);

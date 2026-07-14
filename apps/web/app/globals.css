@@ -130,6 +130,22 @@ input, select {
   background: #fff;
   margin-bottom: 0.85rem;
 }
+.inline-check { display: flex; align-items: center; gap: 0.5rem; font-weight: 400; margin: 0 0 0.85rem; }
+.inline-check input { width: auto; margin: 0; }
+.form-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.compact-button { padding: 0.35rem 0.55rem; font-size: 0.82rem; white-space: nowrap; }
+.model-actions { white-space: nowrap; text-align: right; }
+.model-default-badge {
+  display: inline-flex;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--grade-a-soft, #e9f7f0);
+  color: var(--grade-a);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.ai-action-controls { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.ai-model-select { width: auto; min-width: min(19rem, 70vw); margin: 0; }
 
 button, .btn {
   font: inherit;

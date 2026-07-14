@@ -39,21 +39,30 @@ function jsonRequest(url, method, data) {
 
 /* ---- Settings ---------------------------------------------------------- */
 
-/** Current (redacted) settings: `{ llm }`. */
+/** Current redacted model configurations and the selected default. */
 export function getSettings() {
   return request("/api/settings");
 }
 
-/** Save the LLM settings; resolves with the updated `{ llm }`. */
-export function updateSettings({ provider, model, apiKey, baseUrl }) {
-  return jsonRequest("/api/settings", "PUT", {
-    llm: { provider, model, apiKey: apiKey || undefined, baseUrl: baseUrl || undefined },
-  });
+/** Create (no id) or update a reusable model configuration. */
+export function saveLlmModel(id, form) {
+  return id
+    ? jsonRequest(`/api/settings/${id}`, "PUT", form)
+    : jsonRequest("/api/settings", "POST", form);
+}
+
+export function deleteLlmModel(id) {
+  return request(`/api/settings/${id}`, { method: "DELETE" });
+}
+
+export function setDefaultLlmModel(id) {
+  return jsonRequest(`/api/settings/${id}`, "PUT", { isDefault: true });
 }
 
 /** Probe a provider connection; resolves with `{ models }`. */
-export function testSettingsConnection({ provider, apiKey, baseUrl }) {
+export function testSettingsConnection({ id, provider, apiKey, baseUrl }) {
   return jsonRequest("/api/settings/test", "POST", {
+    id: id || undefined,
     provider,
     apiKey: apiKey || undefined,
     baseUrl: baseUrl || undefined,
@@ -120,10 +129,14 @@ export function getProductAiAnalysis(analysisId, productId) {
 }
 
 /** Generate or regenerate a rich AI product review with the selected LLM. */
-export async function runProductAiAnalysis(analysisId, productId, onProgress) {
+export async function runProductAiAnalysis(analysisId, productId, modelConfigurationId, onProgress) {
   const response = await fetch(
     `/api/analyses/${analysisId}/products/${productId}/ai-analysis`,
-    { method: "POST" }
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ modelConfigurationId }),
+    }
   );
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -162,7 +175,11 @@ export async function runProductAiAnalysis(analysisId, productId, onProgress) {
   }
   if (buffered.trim()) consume(buffered);
   if (!completed) throw new ApiError("AI Analysis ended before returning a result.");
-  return { review: completed.review, llm: completed.llm };
+  return {
+    review: completed.review,
+    models: completed.models || [],
+    defaultModelId: completed.defaultModelId || null,
+  };
 }
 
 /** Compare two completed analyses from the same environment. */

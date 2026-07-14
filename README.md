@@ -61,7 +61,9 @@ npm run dev
 - **New analysis** — pick an environment and run; or run a demo analysis with
   no credentials to see the dashboards populated. Analyses run asynchronously:
   you land on a live analysis page (progress bar + sections filling in as the
-  run advances) and can navigate away and come back at any time.
+  run advances) and can navigate away and come back at any time. When semantic
+  scoring is enabled, choose any ready saved model; the default is preselected
+  and the exact configuration/provider/model is captured with the report.
 - **Dashboard / environment pages** — latest grade, score sparkline over
   time, dimension breakdown, most common issues, weakest categories, and the
   impact-weighted top-fix list. Top fixes support product/SKU search, grade
@@ -102,7 +104,7 @@ npm run dev
   Analysis—including safely retrievable reviewed-image thumbnails—when one is
   available.
 - **On-demand product AI Analysis** — from a product drill-down, use the LLM
-  selected in Settings to generate a saved, merchant-ready review: prioritized
+  selected beside the action to generate a saved, merchant-ready review: prioritized
   fixes, revised title and descriptions, derived catalog fields, category and
   merchandising placement, feed/SEO values, conversion opportunities, data
   risks, and merchant follow-up questions. Vision-capable models also review up
@@ -110,12 +112,21 @@ npm run dev
   selection, and accessible alt text; unsupported models retry text-only.
   While it runs, the product page streams the actual server stage—from loading
   catalog data through image preparation, generation, validation, and saving.
-- **Settings** — connect an LLM for the optional semantic scoring pass:
-  Anthropic (Claude, default `claude-opus-4-8`), OpenAI, or Ollama (local
-  models, free, data never leaves the machine). API keys are stored
-  write-only like store tokens (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` env
-  vars work as fallbacks). "Connect & list models" pulls the live model list
-  from the provider.
+  The saved review and product PDF retain the configuration name and underlying
+  provider/model used, even if that configuration is later edited or removed.
+- **Settings** — add, edit, remove, test, and name multiple Anthropic, OpenAI,
+  or local Ollama model configurations and choose one default. The default is
+  merely the initial choice: semantic and product AI actions can select another
+  ready model for each run. API keys remain encrypted at rest and write-only in
+  the UI (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` environment fallbacks remain
+  supported). Existing single-model settings are imported automatically.
+
+Model-configuration persistence and migration have a dedicated integration
+test:
+
+```bash
+npm run test_llm_models
+```
 
 ### PDF export smoke test
 

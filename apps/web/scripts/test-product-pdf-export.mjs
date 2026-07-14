@@ -159,6 +159,8 @@ try {
     aiReview: {
       provider: "openai",
       model: "gpt-4o-mini",
+      modelConfigurationId: "catalog-reviewer",
+      modelConfigurationName: "Catalog reviewer",
       source: "current BigCommerce product",
       imageAnalysis: true,
       generatedAt: "2026-07-14T14:05:00Z",

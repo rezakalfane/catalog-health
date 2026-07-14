@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { normalizeOllamaBaseUrl } from "@catalog-health/core";
-import { getSettings, envKeyFor } from "@/lib/db";
+import { envKeyFor, getDefaultLlmModel, getLlmModel } from "@/lib/db";
 import { getApiUser } from "@/lib/auth-helpers";
 
 // OpenAI's /v1/models mixes chat models with embeddings/audio/image/etc.
@@ -17,7 +17,7 @@ export async function POST(request) {
   const user = await getApiUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await request.json().catch(() => ({}));
-  const stored = getSettings(user.id).llm || {};
+  const stored = (body.id ? getLlmModel(user.id, body.id) : getDefaultLlmModel(user.id)) || {};
   const provider = body.provider || stored.provider || "anthropic";
 
   try {

@@ -780,3 +780,30 @@ replacing every non-ASCII character. It still normalizes equivalent character
 sequences, uses PDF-safe ASCII punctuation where required, and removes control
 characters. Analysis, comparison, and product PDF fixtures now exercise
 Western-European product and category names.
+
+## 39. Multiple selectable AI model configurations — 2026-07-14
+
+> **Prompt:** Allow multiple engines/models in Settings, choose one default,
+> select a model for semantic analysis and product AI Analysis, and add/edit/
+> remove configurations like environments while storing the model used.
+
+**Summary:** Replaced the single global LLM choice with reusable, owner-scoped
+model configurations and per-task selection.
+
+- Settings now supports named Anthropic, OpenAI, and local Ollama configurations
+  with add, edit, remove, connection testing, readiness status, and exactly one
+  default. Removing the default safely promotes another saved configuration.
+- Existing single-model settings import automatically on first access. API keys
+  remain encrypted at rest, never return to the browser, and provider-specific
+  environment-key fallbacks continue to work.
+- New analyses preselect the default ready model but allow another model to be
+  chosen for semantic scoring. The background runner receives an immutable
+  configuration snapshot so concurrent edits cannot change an active run.
+- Product AI Analysis exposes the same model picker beside initial and refresh
+  actions. Saved reviews retain configuration ID/name plus provider/model, and
+  continue to display correct attribution after configuration edits or removal.
+- Analysis metadata, comparisons, analysis/comparison PDFs, and product PDFs
+  display the saved configuration name alongside the underlying model.
+- Added SQLite migration 10 and `npm run test_llm_models` covering default
+  invariants, CRUD, owner isolation, legacy import, credential redaction, and
+  safe Ollama URL validation.

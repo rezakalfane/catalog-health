@@ -149,6 +149,30 @@ const MIGRATIONS = [
     PRIMARY KEY (analysis_id, product_id)
   );
   `,
+
+  // 10 — reusable LLM model configurations. Each user may save multiple
+  // provider/model connections and select exactly one default. Historical
+  // analysis rows keep their own immutable provider/model attribution.
+  `
+  CREATE TABLE llm_models (
+    id          TEXT PRIMARY KEY,
+    user_id     TEXT NOT NULL,
+    name        TEXT NOT NULL,
+    provider    TEXT NOT NULL,
+    model       TEXT NOT NULL,
+    api_key     TEXT,
+    base_url    TEXT,
+    is_default  INTEGER NOT NULL DEFAULT 0,
+    created_at  TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+  );
+  CREATE INDEX idx_llm_models_user ON llm_models (user_id, created_at);
+  CREATE UNIQUE INDEX idx_llm_models_default
+    ON llm_models (user_id) WHERE is_default = 1;
+
+  ALTER TABLE product_ai_analyses ADD COLUMN model_configuration_id TEXT;
+  ALTER TABLE product_ai_analyses ADD COLUMN model_configuration_name TEXT;
+  `,
 ];
 
 function migrate(db) {

@@ -50,6 +50,7 @@ function metadataRows(metadata) {
         ["Score weight", percent(profile.semanticWeight)],
         ["Prompt version", semantic.promptVersion],
         ["Provider", semantic.provider],
+        ["Model configuration", semantic.configurationName],
         ["Model", semantic.model],
         ["Judge", semantic.judgeLabel],
       ],

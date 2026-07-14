@@ -13,6 +13,7 @@
     "test_analysis_recalculation": "npm run test_analysis_recalculation --workspace @catalog-health/web",
     "test_product_ai_analysis": "npm run test_product_ai_analysis --workspace @catalog-health/web",
     "test_product_pdf_export": "npm run test_product_pdf_export --workspace @catalog-health/web",
+    "test_llm_models": "npm run test_llm_models --workspace @catalog-health/web",
     "cli": "node packages/cli/src/index.js"
   },
   "engines": { "node": ">=20" }

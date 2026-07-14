@@ -55,6 +55,8 @@ const targetScoringMetadata = createScoringMetadata({
     provider: "openai",
     model: "gpt-4o-mini",
     label: "gpt-4o-mini (OpenAI)",
+    configurationId: "marketplace-judge",
+    configurationName: "Marketplace judge",
   },
 });
 

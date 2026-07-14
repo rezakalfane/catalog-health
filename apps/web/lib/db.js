@@ -53,6 +53,13 @@ function secureDb() {
         changed += 1;
       }
     }
+    for (const model of conn.prepare("SELECT id, api_key FROM llm_models").all()) {
+      if (model.api_key && !isEncrypted(model.api_key)) {
+        conn.prepare("UPDATE llm_models SET api_key = ? WHERE id = ?")
+          .run(encryptSecret(model.api_key), model.id);
+        changed += 1;
+      }
+    }
   });
   sweep();
 
@@ -104,19 +111,9 @@ export function getOrCreateUser({ email, name }) {
   return toUser(user);
 }
 
-// -- Settings ----------------------------------------------------------------
-//
-// settings.llm = { provider: "anthropic" | "openai" | "ollama", model, apiKey, baseUrl }
-// Per user. The API key is write-only towards the browser, like store tokens.
-
-export function getSettings(userId) {
-  const rows = secureDb()
-    .prepare("SELECT key, value FROM settings WHERE user_id = ?")
-    .all(userId);
-  const out = Object.fromEntries(rows.map((r) => [r.key, parse(r.value)]));
-  if (out.llm?.apiKey) out.llm.apiKey = decryptSecret(out.llm.apiKey);
-  return out;
-}
+// -- LLM model configurations -----------------------------------------------
+// Per user. API keys are encrypted at rest and write-only towards the browser.
+// A legacy settings.llm blob is imported into this collection on first access.
 
 /** Env-var API key fallback for a provider (Ollama needs none). */
 export function envKeyFor(provider) {
@@ -125,40 +122,157 @@ export function envKeyFor(provider) {
   return null;
 }
 
-/** Merge an LLM settings patch. An empty/absent apiKey keeps the stored one. */
-export function updateLlmSettings(userId, patch) {
-  const db = secureDb();
-  const llm = getSettings(userId).llm || {}; // apiKey decrypted (if any)
-  // A key saved for one provider must never be sent to another.
-  if (patch.provider && patch.provider !== llm.provider) delete llm.apiKey;
-  for (const key of ["provider", "model", "baseUrl"]) {
-    if (patch[key] !== undefined) llm[key] = patch[key];
-  }
-  if (patch.apiKey) llm.apiKey = patch.apiKey;
-  // Encrypt only the apiKey field; provider/model stay queryable/redactable.
-  const stored = { ...llm };
-  if (stored.apiKey) stored.apiKey = encryptSecret(stored.apiKey);
-  db.prepare(
-    `INSERT INTO settings (user_id, key, value) VALUES (?, 'llm', ?)
-     ON CONFLICT(user_id, key) DO UPDATE SET value = excluded.value`
-  ).run(userId, JSON.stringify(stored));
-  return llm; // decrypted, for server-side use
+const LLM_PROVIDERS = new Set(["anthropic", "openai", "ollama"]);
+
+function toLlmModel(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    provider: row.provider,
+    model: row.model,
+    apiKey: row.api_key ? decryptSecret(row.api_key) : null,
+    baseUrl: row.base_url || "",
+    isDefault: Boolean(row.is_default),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
-/** LLM settings safe to send to the client. Pass the user's getSettings(). */
-export function redactLlmSettings(settings) {
-  const { apiKey, ...rest } = settings?.llm || {};
-  const provider = rest.provider || "anthropic";
-  const envKey = envKeyFor(provider);
+/** Import the pre-multi-model settings blob once, without exposing its key. */
+function importLegacyLlmModel(userId) {
+  const db = secureDb();
+  if (db.prepare("SELECT 1 FROM llm_models WHERE user_id = ? LIMIT 1").get(userId)) return;
+  const row = db.prepare("SELECT value FROM settings WHERE user_id = ? AND key = 'llm'").get(userId);
+  if (!row) return;
+  const legacy = parse(row.value) || {};
+  if (!legacy.model || !LLM_PROVIDERS.has(legacy.provider || "anthropic")) return;
+  const now = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO llm_models
+       (id, user_id, name, provider, model, api_key, base_url, is_default, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
+  ).run(
+    id(), userId, legacy.name || legacy.model, legacy.provider || "anthropic",
+    legacy.model, legacy.apiKey || null, legacy.baseUrl || null, now, now
+  );
+}
+
+export function listLlmModels(userId) {
+  importLegacyLlmModel(userId);
+  return secureDb()
+    .prepare("SELECT * FROM llm_models WHERE user_id = ? ORDER BY is_default DESC, created_at, name")
+    .all(userId)
+    .map(toLlmModel);
+}
+
+export function getLlmModel(userId, modelId) {
+  if (!modelId) return null;
+  importLegacyLlmModel(userId);
+  return toLlmModel(
+    secureDb().prepare("SELECT * FROM llm_models WHERE id = ? AND user_id = ?").get(modelId, userId)
+  );
+}
+
+export function getDefaultLlmModel(userId) {
+  importLegacyLlmModel(userId);
+  return toLlmModel(
+    secureDb()
+      .prepare("SELECT * FROM llm_models WHERE user_id = ? ORDER BY is_default DESC, created_at LIMIT 1")
+      .get(userId)
+  );
+}
+
+function makeDefault(db, userId, modelId) {
+  db.prepare("UPDATE llm_models SET is_default = 0 WHERE user_id = ?").run(userId);
+  db.prepare("UPDATE llm_models SET is_default = 1 WHERE id = ? AND user_id = ?").run(modelId, userId);
+}
+
+export function createLlmModel(userId, input) {
+  const db = secureDb();
+  importLegacyLlmModel(userId);
+  const now = new Date().toISOString();
+  const modelId = id();
+  const first = !db.prepare("SELECT 1 FROM llm_models WHERE user_id = ? LIMIT 1").get(userId);
+  const create = db.transaction(() => {
+    db.prepare(
+      `INSERT INTO llm_models
+         (id, user_id, name, provider, model, api_key, base_url, is_default, created_at, updated_at)
+       VALUES (@id, @userId, @name, @provider, @model, @apiKey, @baseUrl, 0, @createdAt, @updatedAt)`
+    ).run({
+      id: modelId,
+      userId,
+      name: input.name,
+      provider: input.provider,
+      model: input.model,
+      apiKey: input.apiKey ? encryptSecret(input.apiKey) : null,
+      baseUrl: input.baseUrl || null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    if (first || input.isDefault) makeDefault(db, userId, modelId);
+  });
+  create();
+  return getLlmModel(userId, modelId);
+}
+
+export function updateLlmModel(userId, modelId, input) {
+  const db = secureDb();
+  const current = getLlmModel(userId, modelId);
+  if (!current) return null;
+  const providerChanged = input.provider && input.provider !== current.provider;
+  const next = {
+    name: input.name ?? current.name,
+    provider: input.provider ?? current.provider,
+    model: input.model ?? current.model,
+    baseUrl: input.baseUrl ?? current.baseUrl,
+    apiKey: input.apiKey || (providerChanged ? null : current.apiKey),
+    updatedAt: new Date().toISOString(),
+  };
+  const update = db.transaction(() => {
+    db.prepare(
+      `UPDATE llm_models SET
+         name = @name, provider = @provider, model = @model, api_key = @apiKey,
+         base_url = @baseUrl, updated_at = @updatedAt
+       WHERE id = @id AND user_id = @userId`
+    ).run({
+      ...next,
+      id: modelId,
+      userId,
+      apiKey: next.apiKey ? encryptSecret(next.apiKey) : null,
+      baseUrl: next.baseUrl || null,
+    });
+    if (input.isDefault) makeDefault(db, userId, modelId);
+  });
+  update();
+  return getLlmModel(userId, modelId);
+}
+
+export function deleteLlmModel(userId, modelId) {
+  const db = secureDb();
+  const current = getLlmModel(userId, modelId);
+  if (!current) return false;
+  const remove = db.transaction(() => {
+    db.prepare("DELETE FROM llm_models WHERE id = ? AND user_id = ?").run(modelId, userId);
+    if (current.isDefault) {
+      const fallback = db.prepare("SELECT id FROM llm_models WHERE user_id = ? ORDER BY created_at LIMIT 1").get(userId);
+      if (fallback) makeDefault(db, userId, fallback.id);
+    }
+  });
+  remove();
+  return true;
+}
+
+export function redactLlmModel(model) {
+  if (!model) return null;
+  const { apiKey, ...safe } = model;
+  const envKey = envKeyFor(model.provider);
   const hasKey = Boolean(apiKey || envKey);
-  const configured =
-    provider === "ollama" ? Boolean(rest.model) : Boolean(rest.model && hasKey);
   return {
-    ...rest,
-    provider,
+    ...safe,
     hasKey,
     keyFromEnv: Boolean(!apiKey && envKey),
-    configured,
+    configured: model.provider === "ollama" ? Boolean(model.model) : Boolean(model.model && hasKey),
   };
 }
 
@@ -415,6 +529,8 @@ function toProductAiAnalysis(row) {
   return {
     provider: row.provider,
     model: row.model,
+    modelConfigurationId: row.model_configuration_id || null,
+    modelConfigurationName: row.model_configuration_name || null,
     source: row.source,
     imageAnalysis: Boolean(row.image_analysis),
     result: parse(row.result),
@@ -444,11 +560,15 @@ export function saveProductAiAnalysis(userId, analysisId, productId, review) {
   getDb()
     .prepare(
       `INSERT INTO product_ai_analyses
-         (analysis_id, product_id, provider, model, source, image_analysis, result, generated_at)
-       VALUES (@analysisId, @productId, @provider, @model, @source, @imageAnalysis, @result, @generatedAt)
+         (analysis_id, product_id, provider, model, model_configuration_id,
+          model_configuration_name, source, image_analysis, result, generated_at)
+       VALUES (@analysisId, @productId, @provider, @model, @modelConfigurationId,
+         @modelConfigurationName, @source, @imageAnalysis, @result, @generatedAt)
        ON CONFLICT(analysis_id, product_id) DO UPDATE SET
          provider = excluded.provider,
          model = excluded.model,
+         model_configuration_id = excluded.model_configuration_id,
+         model_configuration_name = excluded.model_configuration_name,
          source = excluded.source,
          image_analysis = excluded.image_analysis,
          result = excluded.result,
@@ -459,6 +579,8 @@ export function saveProductAiAnalysis(userId, analysisId, productId, review) {
       productId,
       provider: review.provider,
       model: review.model,
+      modelConfigurationId: review.modelConfigurationId || null,
+      modelConfigurationName: review.modelConfigurationName || null,
       source: review.source,
       imageAnalysis: review.imageAnalysis ? 1 : 0,
       result: JSON.stringify(review.result),

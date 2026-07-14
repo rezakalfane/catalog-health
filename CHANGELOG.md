@@ -7,6 +7,28 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feature/multiple-ai-models — 2026-07-14
+
+Reusable AI model configurations and per-task selection. Developed on
+`feature/multiple-ai-models`, merged into `main` (no-ff). HISTORY.md entry 39.
+
+Highlights:
+
+- Replaced the single global provider/model setting with named, owner-scoped
+  Anthropic, OpenAI, and Ollama configurations supporting add, edit, remove,
+  connection testing, readiness status, and exactly one default.
+- Added backward-compatible import of existing settings, encrypted write-only
+  credentials, provider-key isolation, and safe fallback promotion when the
+  default configuration is removed through SQLite migration 10.
+- Added explicit model selection to new semantic analyses and product AI
+  Analysis runs, with the default preselected and an immutable configuration
+  snapshot passed to background work.
+- Persisted and displayed configuration name, provider, and model in analysis
+  metadata, comparisons, product reviews, and all relevant PDF exports.
+- Added `npm run test_llm_models` for CRUD, default invariants, ownership,
+  migration, redaction, and safe local-provider validation, plus expanded AI,
+  scoring-metadata, and PDF coverage.
+
 ## feature/product-ai-analysis — 2026-07-14
 
 Rich on-demand product recommendations. Developed on
