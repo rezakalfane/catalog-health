@@ -135,6 +135,9 @@ export function compareProducts(baseRows = [], targetRows = []) {
         targetImpact: target?.impact ?? null,
         impactDelta: delta(base?.impact, target?.impact),
         thumbnailUrl: product.details?.thumbnailUrl || "",
+        baseAiAnalyzed: Boolean(base?.aiAnalyzed),
+        targetAiAnalyzed: Boolean(target?.aiAnalyzed),
+        aiAnalyzed: Boolean(base?.aiAnalyzed || target?.aiAnalyzed),
       };
     })
     .sort((a, b) => {

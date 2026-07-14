@@ -375,7 +375,12 @@ export function deleteAnalysis(userId, analysisId) {
 export function getAnalysisRows(userId, analysisId) {
   return getDb()
     .prepare(
-      `SELECT p.* FROM analysis_products p
+      `SELECT p.*,
+        EXISTS (
+          SELECT 1 FROM product_ai_analyses ai
+          WHERE ai.analysis_id = p.analysis_id AND ai.product_id = p.product_id
+        ) AS ai_analyzed
+       FROM analysis_products p
        JOIN analyses a ON a.id = p.analysis_id
        WHERE p.analysis_id = ? AND a.user_id = ? ORDER BY p.impact DESC`
     )
@@ -394,7 +399,72 @@ export function getAnalysisRows(userId, analysisId) {
       issues: parse(r.issues),
       details: parse(r.details),
       semantic: parse(r.semantic),
+      aiAnalyzed: Boolean(r.ai_analyzed),
     }));
+}
+
+/** One product result, owner-scoped, without loading the full analysis table. */
+export function getAnalysisProduct(userId, analysisId, productId) {
+  return getAnalysisRows(userId, analysisId).find(
+    (row) => String(row.id) === String(productId)
+  ) || null;
+}
+
+function toProductAiAnalysis(row) {
+  if (!row) return null;
+  return {
+    provider: row.provider,
+    model: row.model,
+    source: row.source,
+    imageAnalysis: Boolean(row.image_analysis),
+    result: parse(row.result),
+    generatedAt: row.generated_at,
+  };
+}
+
+/** Latest saved AI review for this product, scoped through the analysis owner. */
+export function getProductAiAnalysis(userId, analysisId, productId) {
+  return toProductAiAnalysis(
+    getDb()
+      .prepare(
+        `SELECT r.* FROM product_ai_analyses r
+         JOIN analyses a ON a.id = r.analysis_id
+         WHERE r.analysis_id = ? AND r.product_id = ? AND a.user_id = ?`
+      )
+      .get(analysisId, productId, userId)
+  );
+}
+
+/** Save (or replace) the review for a product. Ownership is checked first. */
+export function saveProductAiAnalysis(userId, analysisId, productId, review) {
+  const owned = getDb()
+    .prepare("SELECT 1 FROM analyses WHERE id = ? AND user_id = ?")
+    .get(analysisId, userId);
+  if (!owned) return null;
+  getDb()
+    .prepare(
+      `INSERT INTO product_ai_analyses
+         (analysis_id, product_id, provider, model, source, image_analysis, result, generated_at)
+       VALUES (@analysisId, @productId, @provider, @model, @source, @imageAnalysis, @result, @generatedAt)
+       ON CONFLICT(analysis_id, product_id) DO UPDATE SET
+         provider = excluded.provider,
+         model = excluded.model,
+         source = excluded.source,
+         image_analysis = excluded.image_analysis,
+         result = excluded.result,
+         generated_at = excluded.generated_at`
+    )
+    .run({
+      analysisId,
+      productId,
+      provider: review.provider,
+      model: review.model,
+      source: review.source,
+      imageAnalysis: review.imageAnalysis ? 1 : 0,
+      result: JSON.stringify(review.result),
+      generatedAt: review.generatedAt,
+    });
+  return getProductAiAnalysis(userId, analysisId, productId);
 }
 
 export function createAnalysis({

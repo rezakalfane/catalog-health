@@ -6,6 +6,7 @@ import ActionIcon from "@/components/ActionIcon";
 import GradeLozenge from "@/components/GradeLozenge";
 import InfoPopover from "@/components/InfoPopover";
 import ProductThumb from "@/components/ProductThumb";
+import AiAnalyzedBadge from "@/components/AiAnalyzedBadge";
 import { issueLabel } from "@/components/issue-info";
 import { sectionInfo } from "@/components/section-info";
 import { getAnalysisProducts } from "@/lib/api-client";
@@ -185,7 +186,10 @@ export default function TopFixesTable({
                 <span className="prod-cell">
                   <ProductThumb src={row.details?.thumbnailUrl} alt="" />
                   {hasRows ? (
-                    <Link href={`/analyses/${analysisId}/products/${row.id}`}>{row.name}</Link>
+                    <span className="product-name-with-ai">
+                      <Link href={`/analyses/${analysisId}/products/${row.id}`}>{row.name}</Link>
+                      <AiAnalyzedBadge analyzed={row.aiAnalyzed} />
+                    </span>
                   ) : (
                     row.name
                   )}

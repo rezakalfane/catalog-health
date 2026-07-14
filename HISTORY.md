@@ -703,3 +703,45 @@ before users interpret analysis deltas.
 Verified with scoring compatibility tests, analysis and comparison PDF smoke
 tests, rendered visual inspection of every generated PDF page,
 `git diff --check`, and `npm run build`.
+
+## 36. Rich product AI Analysis — 2026-07-14
+
+> **Prompt:** Add an “AI Analysis” button to product detail pages using the
+> selected LLM for title and description suggestions, derived fields,
+> placement, feed-ready values, image analysis where supported, and any other
+> useful AI recommendations. Show a rich AI Analysis section at page end.
+
+**Summary:** Added a saved, on-demand catalog and merchandising review to each
+product drill-down.
+
+- The selected Anthropic, OpenAI, or local Ollama model returns one validated
+  structured result spanning priority actions, copy rewrites, evidence-backed
+  core/custom/feed fields, taxonomy and merchandising placement, SEO and feed
+  values, conversion opportunities, data risks, and merchant questions.
+- The endpoint fetches the current full BigCommerce product read-only for rich
+  context, with analysis-snapshot fallback for unavailable or removed stores.
+  Reviews are persisted separately from immutable scoring facts and scoped to
+  the analysis owner.
+- Up to five safely downloaded BigCommerce CDN images can be visually reviewed
+  for quality, purpose, hero suitability, missing shots, and alt text. Models
+  that reject image input automatically retry using text and product data.
+- The product page now has a top-right generation/refresh action and a detailed
+  end-of-page report with copy buttons, confidence and verification markers,
+  action cards, tables, image cards, limitations, and responsive layouts.
+- Catalog text is isolated as untrusted prompt data. The model is explicitly
+  forbidden from inventing identifiers or unsupported specifications and
+  claims; uncertain inferences require evidence and merchant verification.
+- Added SQLite migration 9, AI SDK provider adapters, and
+  `npm run test_product_ai_analysis` covering schema validation, single-product
+  API retrieval, owner-scoped persistence, and deletion cascade.
+- The running panel streams the real server step and detail, including product
+  loading, context/image preparation, model generation, text-only image
+  fallback, validation, and persistence; NDJSON parsing is tested across
+  fragmented network chunks.
+- Product names in All Products, Top Fixes, and comparison Product Changes now
+  show a compact accessible sparkle when a persisted AI review exists. The
+  comparison tooltip identifies whether that review belongs to the previous
+  report, current report, or both.
+- Each visually analyzed image card now includes the exact BigCommerce CDN
+  thumbnail that passed the safe downloader and was supplied to the model,
+  matched by the model-visible image index and persisted with the review.

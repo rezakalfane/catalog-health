@@ -19,7 +19,7 @@ apps/web        Next.js app — manage environments (stores), run analyses,
 
 ## Requirements
 
-- Node.js >= 18.18 (uses native `fetch`)
+- Node.js >= 20 (uses native `fetch` and the AI SDK provider adapters)
 - A BigCommerce API token per store with **Products: read-only** scope
   (the tool only issues GET requests). Optional: a **Channel settings:
   read-only** scope lets reports show channel names instead of tree ids.
@@ -95,6 +95,15 @@ npm run dev
   results: browse them with filters (search, grade, issue, category, sort),
   export the filtered/sorted list as an Excel-friendly CSV, and open any
   product for its dimension scores, issues with fix hints, traffic and impact.
+- **On-demand product AI Analysis** — from a product drill-down, use the LLM
+  selected in Settings to generate a saved, merchant-ready review: prioritized
+  fixes, revised title and descriptions, derived catalog fields, category and
+  merchandising placement, feed/SEO values, conversion opportunities, data
+  risks, and merchant follow-up questions. Vision-capable models also review up
+  to five BigCommerce-hosted images for quality, role, missing shots, hero
+  selection, and accessible alt text; unsupported models retry text-only.
+  While it runs, the product page streams the actual server stage—from loading
+  catalog data through image preparation, generation, validation, and saving.
 - **Settings** — connect an LLM for the optional semantic scoring pass:
   Anthropic (Claude, default `claude-opus-4-8`), OpenAI, or Ollama (local
   models, free, data never leaves the machine). API keys are stored
@@ -120,6 +129,14 @@ npm run test_comparison_pdf_export
 
 It generates and validates a multi-page comparison report at
 `tmp/pdfs/catalog-health-comparison-test.pdf`.
+
+The product AI workflow has an integration test for structured output,
+streamed stages, owner-scoped persistence, image binding, table indicators,
+and deletion cascade:
+
+```bash
+npm run test_product_ai_analysis
+```
 
 ## Scoring profiles
 
@@ -243,7 +260,8 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
   route goes through it — and `apps/web/lib/sqlite.js` owns the connection,
   schema, and migrations (append a block to `MIGRATIONS`; versions tracked
   via `PRAGMA user_version`). Tables: `environments`, `analyses`,
-  `analysis_products` (per-product results, FK-cascaded), `settings`.
+  `analysis_products` (per-product results, FK-cascaded),
+  `product_ai_analyses` (latest optional generated review), and `settings`.
   Recalculated analyses retain a nullable self-reference to their source;
   deleting the source clears that link without deleting the derived report.
   Deleting an analysis cascades to its stored per-product rows, while analyses
@@ -271,6 +289,10 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
   **dev login** (sign in as any email) is available for local testing. The
   first account to sign in adopts any pre-auth data. See the auth vars in
   `apps/web/.env.example`.
+- Product AI Analysis treats catalog copy as untrusted prompt data, never
+  writes changes back to BigCommerce, and asks the model not to invent product
+  claims or identifiers. Server-side image retrieval accepts only HTTPS images
+  on BigCommerce CDN hosts, with count, timeout, media-type, and size limits.
 - Company policy: no PII into Claude when developing against real catalogs,
   and any deployment must start with a GRC review — no personal
   Vercel/Netlify accounts.
@@ -299,6 +321,9 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
       product rows, preserve derived reports, and protect active runs
 - [x] Compact PDF, full-product CSV, and confirmed-delete actions in both the
       Dashboard Recent analyses and environment Analysis history tables
+- [x] On-demand, persisted product AI Analysis with provider-aware structured
+      recommendations, live-product/snapshot fallback, copy-ready fields, and
+      safe multimodal image review where the selected model supports it
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)
 - [x] Auth (Google SSO + dev login) and per-user multi-tenancy

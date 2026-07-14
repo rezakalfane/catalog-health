@@ -114,6 +114,57 @@ export function getAnalysisProducts(id) {
   return request(`/api/analyses/${id}/products`);
 }
 
+/** Load the saved AI product review and current provider readiness. */
+export function getProductAiAnalysis(analysisId, productId) {
+  return request(`/api/analyses/${analysisId}/products/${productId}/ai-analysis`);
+}
+
+/** Generate or regenerate a rich AI product review with the selected LLM. */
+export async function runProductAiAnalysis(analysisId, productId, onProgress) {
+  const response = await fetch(
+    `/api/analyses/${analysisId}/products/${productId}/ai-analysis`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new ApiError(body.error || `Request failed (${response.status})`, {
+      status: response.status,
+      body,
+    });
+  }
+  if (!response.body) throw new ApiError("AI Analysis returned no response stream.");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffered = "";
+  let completed = null;
+
+  function consume(line) {
+    if (!line.trim()) return;
+    const event = JSON.parse(line);
+    if (event.type === "progress") onProgress?.({ step: event.step, detail: event.detail });
+    if (event.type === "result") completed = event;
+    if (event.type === "error") {
+      throw new ApiError(event.error || "AI Analysis failed.", {
+        status: 502,
+        body: { error: event.error || "AI Analysis failed." },
+      });
+    }
+  }
+
+  while (true) {
+    const { value, done } = await reader.read();
+    buffered += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const lines = buffered.split("\n");
+    buffered = lines.pop() || "";
+    for (const line of lines) consume(line);
+    if (done) break;
+  }
+  if (buffered.trim()) consume(buffered);
+  if (!completed) throw new ApiError("AI Analysis ended before returning a result.");
+  return { review: completed.review, llm: completed.llm };
+}
+
 /** Compare two completed analyses from the same environment. */
 export function compareAnalyses(base, target) {
   const params = new URLSearchParams({ base, target });

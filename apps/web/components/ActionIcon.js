@@ -10,6 +10,7 @@ const PATHS = {
   table: <path d="M4 5h16v14H4V5Zm0 5h16M9 5v14" />,
   trash: <path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5" />,
   store: <path d="M4 10h16l-2-5H6l-2 5Zm2 0v9h12v-9M9 19v-5h6v5" />,
+  sparkle: <path d="m12 3 1.35 4.15L17.5 8.5l-4.15 1.35L12 14l-1.35-4.15L6.5 8.5l4.15-1.35L12 3Zm6 10 .8 2.2L21 16l-2.2.8L18 19l-.8-2.2L15 16l2.2-.8L18 13ZM5 14l.8 2.2L8 17l-2.2.8L5 20l-.8-2.2L2 17l2.2-.8L5 14Z" />,
 };
 
 export default function ActionIcon({ name }) {
