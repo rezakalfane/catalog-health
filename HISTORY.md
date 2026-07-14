@@ -745,3 +745,38 @@ product drill-down.
 - Each visually analyzed image card now includes the exact BigCommerce CDN
   thumbnail that passed the safe downloader and was supplied to the model,
   matched by the model-visible image index and persisted with the review.
+
+## 37. Comprehensive product detail PDF export — 2026-07-14
+
+> **Prompt:** Add a comprehensive Export as PDF feature on a product detail
+> page, including AI Analysis when available.
+
+**Summary:** Turned an individual product drill-down into a portable, complete
+review for catalog and merchandising teams.
+
+- Product pages now expose a top-right **Export as PDF** action beside the AI
+  Analysis action. The authenticated endpoint remains owner-scoped and only
+  exports products stored in a completed analysis.
+- The paginated A4 report covers score, grade, commercial impact, dimension
+  scores, captured catalog facts, description, categories, scoring issues with
+  fixes, and semantic-review evidence.
+- When a saved AI Analysis exists, the report includes its generation metadata,
+  executive summary, prioritized actions, revised copy, derived fields,
+  placement, feed and SEO values, conversion ideas, data risks, merchant
+  questions, limitations, and image reviews.
+- Reviewed-image thumbnails are fetched only from approved HTTPS BigCommerce
+  hosts with strict type, size, count, and timeout limits. Reports without a
+  saved AI Analysis clearly explain how to add it and export again.
+- Added `npm run test_product_pdf_export` with comprehensive AI-enriched and
+  no-AI fixtures plus structural, pagination, and visual rendering checks.
+
+## 38. Preserve accented text in PDF exports — 2026-07-14
+
+> **Prompt:** Fix PDF export encoding such as “Oksemørbrad St. America Grass”
+> being rendered with a question mark.
+
+**Summary:** PDF text normalization now preserves printable Unicode instead of
+replacing every non-ASCII character. It still normalizes equivalent character
+sequences, uses PDF-safe ASCII punctuation where required, and removes control
+characters. Analysis, comparison, and product PDF fixtures now exercise
+Western-European product and category names.
