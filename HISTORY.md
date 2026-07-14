@@ -644,3 +644,26 @@ archive.
 
 Verified with the comparison PDF smoke test, three-page rendered visual
 inspection, and `npm run build`.
+
+## 34. Search, sort, filter, and export Top Fixes — 2026-07-14
+
+> **Prompts:** Duplicate the All Products "Export as CSV" action in the Top
+> Fixes section. → Move it to the section's top right and add search, sorting,
+> and grade filtering like the comparison page. → Show up to 100 Top Fixes on
+> the analysis page instead of 15. → Perfect, update docs, branch, commit, and
+> merge to main.
+
+**Summary:** Turned Top Fixes into a reusable interactive product table.
+
+- Completed analysis reports and environment latest-analysis views now load
+  the complete stored product set for Top Fixes controls while retaining the
+  summary rows as an immediate fallback.
+- Search matches product names and SKUs; grade filtering supports A/B/C/D/F;
+  every displayed column is sortable, with Impact descending as the default.
+- The top-right CSV action exports every filtered product in the active sort
+  order, not only the displayed rows. The All Products page and Top Fixes now
+  share one Excel-friendly CSV serializer.
+- Analysis pages display the first 100 matches. Environment overview pages
+  keep the existing 15-row presentation to avoid overwhelming the dashboard.
+
+Verified with a CSV serializer smoke test and `npm run build`.

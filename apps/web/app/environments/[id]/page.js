@@ -13,11 +13,11 @@ import DimensionBars from "@/components/DimensionBars";
 import Sparkline from "@/components/Sparkline";
 import RunAnalysisAction from "@/components/RunAnalysisAction";
 import AnalysisLiveReport from "@/components/AnalysisLiveReport";
-import ProductThumb from "@/components/ProductThumb";
 import InfoPopover from "@/components/InfoPopover";
 import { sectionInfo } from "@/components/section-info";
 import { formatDuration } from "@/lib/format";
 import SemanticBadge from "@/components/SemanticBadge";
+import TopFixesTable from "@/components/TopFixesTable";
 
 export const dynamic = "force-dynamic";
 
@@ -157,52 +157,13 @@ export default async function EnvironmentDetail({ params }) {
           </div>
 
           <div className="card">
-            <h2>
-              Top fixes (traffic &amp; sales weighted)
-              <InfoPopover title="Top fixes">{sectionInfo.topFixes}</InfoPopover>
-            </h2>
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>SKU</th>
-                  <th>Score</th>
-                  <th>Grade</th>
-                  <th>Impact</th>
-                  <th>Issues</th>
-                </tr>
-              </thead>
-              <tbody>
-                {latest.summary.topFixes.slice(0, 15).map((r) => (
-                  <tr key={r.id}>
-                    <td>
-                      <span className="prod-cell">
-                        <ProductThumb src={r.details?.thumbnailUrl} alt="" />
-                        {latest.hasRows ? (
-                          <Link href={`/analyses/${latest.id}/products/${r.id}`}>{r.name}</Link>
-                        ) : (
-                          r.name
-                        )}
-                      </span>
-                    </td>
-                    <td>{r.sku}</td>
-                    <td>{r.overall}</td>
-                    <td>
-                      <GradeLozenge grade={r.grade} small />
-                    </td>
-                    <td>{r.impact}</td>
-                    <td className="muted">{r.issues.slice(0, 3).join(", ")}{r.issues.length > 3 ? "…" : ""}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {latest.hasRows && (
-              <p style={{ marginBottom: 0 }}>
-                <Link href={`/analyses/${latest.id}/products`}>
-                  Browse all {latest.summary.productCount} products with filters →
-                </Link>
-              </p>
-            )}
+            <TopFixesTable
+              analysisId={latest.id}
+              createdAt={latest.createdAt}
+              initialRows={latest.summary.topFixes}
+              productCount={latest.summary.productCount}
+              hasRows={latest.hasRows}
+            />
           </div>
 
         </>

@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import GradeLozenge from "@/components/GradeLozenge";
 import DimensionBars from "@/components/DimensionBars";
-import ProductThumb from "@/components/ProductThumb";
 import InfoPopover from "@/components/InfoPopover";
 import { sectionInfo } from "@/components/section-info";
 import { getAnalysis } from "@/lib/api-client";
+import TopFixesTable from "@/components/TopFixesTable";
 
 function Skeleton({ width = "100%", height = "0.9rem", style }) {
   return <div className="skeleton" style={{ width, height, ...style }} aria-hidden="true" />;
@@ -219,58 +219,23 @@ export default function AnalysisLiveReport({ analysisId, onAnalysis }) {
       </div>
 
       <div className="card">
-        <h2>
-          Top fixes (traffic &amp; sales weighted)
-          <InfoPopover title="Top fixes">{sectionInfo.topFixes}</InfoPopover>
-        </h2>
         {summary.topFixes ? (
-          <table>
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>SKU</th>
-                <th>Score</th>
-                <th>Grade</th>
-                <th>Impact</th>
-                <th>Issues</th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary.topFixes.slice(0, 15).map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <span className="prod-cell">
-                      <ProductThumb src={r.details?.thumbnailUrl} alt="" />
-                      {analysis?.hasRows ? (
-                        <Link href={`/analyses/${analysisId}/products/${r.id}`}>{r.name}</Link>
-                      ) : (
-                        r.name
-                      )}
-                    </span>
-                  </td>
-                  <td>{r.sku}</td>
-                  <td>{r.overall}</td>
-                  <td>
-                    <GradeLozenge grade={r.grade} small />
-                  </td>
-                  <td>{r.impact}</td>
-                  <td className="muted">
-                    {r.issues.slice(0, 3).join(", ")}
-                    {r.issues.length > 3 ? "…" : ""}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <TopFixesTable
+            analysisId={analysisId}
+            createdAt={analysis?.createdAt}
+            initialRows={summary.topFixes}
+            productCount={summary.productCount}
+            hasRows={Boolean(analysis?.hasRows)}
+            displayLimit={100}
+          />
         ) : (
-          <SkeletonLines count={8} />
-        )}
-        {analysis?.hasRows && summary.topFixes && (
-          <p style={{ marginBottom: 0 }}>
-            <Link href={`/analyses/${analysisId}/products`}>
-              Browse all {summary.productCount} products with filters →
-            </Link>
-          </p>
+          <>
+            <h2>
+              Top fixes (traffic &amp; sales weighted)
+              <InfoPopover title="Top fixes">{sectionInfo.topFixes}</InfoPopover>
+            </h2>
+            <SkeletonLines count={8} />
+          </>
         )}
       </div>
     </>
