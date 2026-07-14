@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
-import { demoCatalog, fetchProduct } from "@catalog-health/core";
+import { demoCatalog, fetchProduct, stripHtml } from "@catalog-health/core";
 import { getApiUser } from "@/lib/auth-helpers";
 import {
   getAnalysis,
   getAnalysisProduct,
+  getAnalysisRows,
   getEnvironment,
   getProductAiAnalysis,
   getDefaultLlmModel,
@@ -77,6 +78,110 @@ function imageUrls(product) {
   return (product?.images || [])
     .map((image) => image.url_zoom || image.url_standard || image.url_thumbnail)
     .filter(Boolean);
+}
+
+const CANDIDATE_LIMIT = 12;
+const STOP_WORDS = new Set([
+  "and", "the", "for", "with", "from", "this", "that", "your", "product",
+  "new", "pro", "lite", "pack", "set", "size", "colour", "color",
+]);
+
+function words(value) {
+  return new Set(
+    stripHtml(value || "")
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(" ")
+      .filter((word) => word.length > 2 && !STOP_WORDS.has(word))
+  );
+}
+
+function shortlistCatalogRows(rows, current) {
+  const currentCategories = new Set((current.categories || []).map(String));
+  const currentWords = words(`${current.name || ""} ${current.details?.descriptionExcerpt || ""}`);
+  return rows
+    .filter((row) => String(row.id) !== String(current.id))
+    .map((row) => {
+      const sharedCategories = (row.categories || []).filter((id) => currentCategories.has(String(id))).length;
+      const candidateWords = words(`${row.name || ""} ${row.details?.descriptionExcerpt || ""}`);
+      const sharedWords = [...candidateWords].filter((word) => currentWords.has(word)).length;
+      const commercialSignal = Math.log1p((row.totalSold || 0) * 3 + (row.viewCount || 0));
+      return { row, relevance: sharedCategories * 100 + sharedWords * 12 + commercialSignal };
+    })
+    .sort((a, b) => b.relevance - a.relevance || (b.row.impact || 0) - (a.row.impact || 0))
+    .slice(0, CANDIDATE_LIMIT)
+    .map(({ row }) => row);
+}
+
+function candidateContext(product, row, categoriesById) {
+  const categoryIds = product?.categories || row.categories || [];
+  const images = product?.images || [];
+  const thumbnail = images.find((image) => image.is_thumbnail) || images[0];
+  const price = product?.price ?? row.details?.price ?? null;
+  const salePrice = product?.sale_price ?? row.details?.salePrice ?? null;
+  return {
+    productId: Number(product?.id ?? row.id),
+    title: product?.name ?? row.name ?? "",
+    sku: product?.sku ?? row.sku ?? "",
+    description: stripHtml(product?.description ?? row.details?.descriptionExcerpt ?? "").slice(0, 2400),
+    categoryIds,
+    categoryNames: categoryIds.map((id) => categoriesById.get(String(id))?.name || `Category ${id}`),
+    price,
+    salePrice: Number(salePrice) > 0 ? salePrice : null,
+    thumbnailUrl: thumbnail?.url_thumbnail || thumbnail?.url_standard || row.details?.thumbnailUrl || "",
+    imageCount: images.length || row.details?.imageCount || 0,
+    imageAltText: images.slice(0, 5).map((image) => image.description || "").filter(Boolean),
+    customFields: (product?.custom_fields || []).slice(0, 20).map(({ name, value }) => ({ name, value })),
+    options: (product?.options || []).slice(0, 12).map(({ display_name, type }) => ({
+      name: display_name || "",
+      type: type || "",
+    })),
+    additionalFields: {
+      brandId: product?.brand_id ?? (row.details?.hasBrand ? "assigned" : null),
+      weight: product?.weight ?? row.details?.weight ?? null,
+      inventoryTracking: product?.inventory_tracking ?? row.details?.inventoryTracking ?? null,
+      inventoryLevel: product?.inventory_level ?? row.details?.inventoryLevel ?? null,
+      identifiers: {
+        gtin: product?.gtin ?? row.details?.gtin ?? "",
+        upc: product?.upc ?? row.details?.upc ?? "",
+        mpn: product?.mpn ?? row.details?.mpn ?? "",
+      },
+    },
+    catalogSignals: {
+      score: row.overall,
+      grade: row.grade,
+      views: row.viewCount,
+      unitsSold: row.totalSold,
+    },
+  };
+}
+
+async function inBatches(items, batchSize, mapper) {
+  const output = [];
+  for (let index = 0; index < items.length; index += batchSize) {
+    output.push(...await Promise.all(items.slice(index, index + batchSize).map(mapper)));
+  }
+  return output;
+}
+
+async function productRecommendationCandidates(analysis, current, userId) {
+  const rows = shortlistCatalogRows(getAnalysisRows(userId, analysis.id), current);
+  const categoriesById = new Map((analysis.catalog?.categories || []).map((category) => [String(category.id), category]));
+  if (analysis.environmentId === "demo") {
+    const byId = new Map(demoCatalog().products.map((product) => [String(product.id), product]));
+    return rows.map((row) => candidateContext(byId.get(String(row.id)), row, categoriesById));
+  }
+  const environment = getEnvironment(userId, analysis.environmentId);
+  if (!environment) return rows.map((row) => candidateContext(null, row, categoriesById));
+  return inBatches(rows, 4, async (row) => {
+    const product = await fetchProduct({
+      storeHash: environment.storeHash,
+      token: environment.accessToken,
+      productId: row.id,
+    }).catch(() => null);
+    return candidateContext(product, row, categoriesById);
+  });
 }
 
 async function sourceProduct(analysis, row, userId) {
@@ -183,9 +288,10 @@ export async function POST(request, { params }) {
           send({
             type: "progress",
             step: "Preparing catalog context",
-            detail: "Combining product content, variants, categories, health issues, traffic, and feed data.",
+            detail: "Combining product content, categories, scoring signals, and a relevant catalog shortlist.",
           });
           const product = compactProduct(source.product, row);
+          const recommendationCandidates = await productRecommendationCandidates(analysis, row, user.id);
           const generated = await analyzeProductWithAi({
             settings,
             onProgress: (progress) => send({ type: "progress", ...progress }),
@@ -194,6 +300,7 @@ export async function POST(request, { params }) {
               sourceWarning: source.warning,
               analyzedSnapshotAt: analysis.createdAt,
               product,
+              productRecommendationCandidates: recommendationCandidates,
               categories: categoryContext(analysis, row),
               health: {
                 score: row.overall,

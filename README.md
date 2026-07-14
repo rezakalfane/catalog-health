@@ -110,6 +110,11 @@ npm run dev
   risks, and merchant follow-up questions. Vision-capable models also review up
   to five BigCommerce-hosted images for quality, role, missing shots, hero
   selection, and accessible alt text; unsupported models retry text-only.
+  The review can also recommend up to five verified products from the analyzed
+  catalog, using title, description, taxonomy, imagery, custom fields, options,
+  commercial signals, and other stored product facts. Recommendation cards show
+  the current thumbnail, title, categories, price, SKU, product ID, and a
+  product-specific reason; the same section is retained in product PDF exports.
   While it runs, the product page streams the actual server stage—from loading
   catalog data through image preparation, generation, validation, and saving.
   The saved review and product PDF retain the configuration name and underlying

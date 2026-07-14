@@ -7,6 +7,28 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feature/ai-product-recommendations — 2026-07-14
+
+Catalog-grounded product recommendations in AI Analysis. Developed on
+`feature/ai-product-recommendations`, merged into `main` (no-ff). HISTORY.md
+entry 40.
+
+Highlights:
+
+- Added a bounded catalog-shortlisting stage that combines shared taxonomy,
+  title and description relevance, and commercial signals, then hydrates the
+  strongest candidates with current BigCommerce product data in small batches.
+- Extended structured AI output with up to five complementary, substitute,
+  upgrade, or adjacent-use recommendations selected exclusively from real
+  candidate IDs.
+- Rejects unknown and duplicate model selections and attaches trusted titles,
+  categories, prices, SKUs, IDs, and thumbnails on the server before saving.
+- Added responsive linked recommendation cards with a product-specific reason,
+  plus matching recommendation cards and safely loaded thumbnails in product
+  PDF exports.
+- Expanded product AI and product PDF integration fixtures, and visually
+  verified every page of the enriched eight-page PDF report.
+
 ## feature/multiple-ai-models — 2026-07-14
 
 Reusable AI model configurations and per-task selection. Developed on

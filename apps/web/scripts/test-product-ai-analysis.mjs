@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { fetchProduct } from "@catalog-health/core";
 import {
   attachAnalyzedImageThumbnails,
+  attachProductRecommendationDetails,
   productAiAnalysisSchema,
 } from "../lib/product-ai-analysis.js";
 import { runProductAiAnalysis } from "../lib/api-client.js";
@@ -27,6 +28,7 @@ const validResult = {
   description: { assessment: "Short.", shortDescription: "A lightweight trail jacket.", rewrittenDescription: "A lightweight jacket for trail use.", sellingPoints: ["Lightweight"], missingInformation: ["Material"] },
   derivedFields: [{ field: "Use case", value: "Trail", fieldType: "custom", confidence: "medium", evidence: "Product name", needsVerification: true }],
   placement: { suggestedCategories: [{ categoryId: 2, name: "Outerwear", rationale: "Matches product type.", isNewCategory: false }], merchandisingCollections: ["Trail essentials"], crossSellIdeas: ["Running vest"] },
+  productRecommendations: [{ productId: 84, reason: "A compatible trail layer for the same use case." }],
   feedAndDiscovery: { googleProductCategory: "Apparel & Accessories > Clothing > Outerwear", productType: "Outerwear > Trail Jackets", seoTitle: "Trail Running Jacket", seoDescription: "Explore a lightweight trail running jacket.", searchTerms: ["trail jacket"], attributes: [], identifierWarnings: ["GTIN is missing."] },
   imageReview: { performed: false, summary: "Images were not available.", heroImageIndex: null, images: [], missingShots: ["Front view"], limitations: ["No image input."] },
   conversionOpportunities: [{ opportunity: "Add use cases", rationale: "Helps shoppers self-select." }],
@@ -54,6 +56,32 @@ assert.equal(
   thumbnailResult.imageReview.images[0].thumbnailUrl,
   "https://cdn11.bigcommerce.com/product-2.jpg"
 );
+
+const recommendationResult = structuredClone(validResult);
+recommendationResult.productRecommendations = [
+  { productId: 84, reason: "Complements the jacket for layered trail use." },
+  { productId: 84, reason: "Duplicate selection." },
+  { productId: 999, reason: "Invented selection." },
+];
+attachProductRecommendationDetails(recommendationResult, [{
+  productId: 84,
+  title: "Trail Base Layer",
+  sku: "BASE-84",
+  categoryNames: ["Trail apparel"],
+  price: 54.95,
+  salePrice: 44.95,
+  thumbnailUrl: "https://cdn11.bigcommerce.com/base-84.jpg",
+}]);
+assert.deepEqual(recommendationResult.productRecommendations, [{
+  productId: 84,
+  title: "Trail Base Layer",
+  sku: "BASE-84",
+  categoryNames: ["Trail apparel"],
+  price: 54.95,
+  salePrice: 44.95,
+  thumbnailUrl: "https://cdn11.bigcommerce.com/base-84.jpg",
+  reason: "Complements the jacket for layered trail use.",
+}]);
 
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (url, options) => {

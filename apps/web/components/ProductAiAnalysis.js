@@ -56,6 +56,7 @@ export function useProductAiAnalysis(analysisId, productId) {
   }, [analysisId, productId, selectedModelId]);
 
   return {
+    analysisId,
     review,
     models,
     selectedModelId,
@@ -66,6 +67,37 @@ export function useProductAiAnalysis(analysisId, productId) {
     error,
     run,
   };
+}
+
+function ProductRecommendationCard({ recommendation, analysisId }) {
+  const hasSalePrice = Number(recommendation.salePrice) > 0;
+  const price = Number(recommendation.price) > 0 ? `$${recommendation.price}` : "Price unavailable";
+  return (
+    <article className="ai-product-card">
+      <Link
+        className="ai-product-thumb-link"
+        href={`/analyses/${analysisId}/products/${recommendation.productId}`}
+        aria-label={`Open ${recommendation.title}`}
+      >
+        <ProductThumb src={recommendation.thumbnailUrl} alt="" size={128} />
+      </Link>
+      <div className="ai-product-card-body">
+        <Link className="ai-product-title" href={`/analyses/${analysisId}/products/${recommendation.productId}`}>
+          {recommendation.title}
+        </Link>
+        <p className="muted ai-product-category">
+          {(recommendation.categoryNames || []).join(" · ") || "Uncategorized"}
+        </p>
+        <div className="ai-product-facts">
+          <span className={hasSalePrice ? "ai-old-price" : ""}>{price}</span>
+          {hasSalePrice && <strong>${recommendation.salePrice}</strong>}
+          <span>SKU {recommendation.sku || "—"}</span>
+          <span>Product ID {recommendation.productId}</span>
+        </div>
+        <p className="ai-product-reason">{recommendation.reason}</p>
+      </div>
+    </article>
+  );
 }
 
 function ModelSelect({ state, id }) {
@@ -281,6 +313,24 @@ export default function ProductAiAnalysis({ state }) {
               <CopyBlock label="SEO description" text={result.feedAndDiscovery.seoDescription} />
               <div className="ai-keywords">{result.feedAndDiscovery.searchTerms.map((term) => <Pill key={term}>{term}</Pill>)}</div>
             </div>
+          </div>
+
+          <div className="ai-subsection">
+            <h3>Product recommendations</h3>
+            <p className="muted">
+              Catalog-grounded products selected as relevant complements, alternatives, or adjacent options.
+            </p>
+            {(result.productRecommendations || []).length > 0 ? (
+              <div className="ai-product-grid">
+                {result.productRecommendations.map((recommendation) => (
+                  <ProductRecommendationCard
+                    key={recommendation.productId}
+                    recommendation={recommendation}
+                    analysisId={state.analysisId}
+                  />
+                ))}
+              </div>
+            ) : <p className="muted">No sufficiently relevant catalog products were identified.</p>}
           </div>
 
           {result.feedAndDiscovery.attributes.length > 0 && <div className="ai-subsection"><h3>Feed-ready attributes</h3><div className="table-scroll"><table><thead><tr><th>Attribute</th><th>Suggested value</th><th>Confidence</th><th>Evidence</th></tr></thead><tbody>{result.feedAndDiscovery.attributes.map((attribute, index) => <tr key={`${attribute.name}-${index}`}><td>{attribute.name}</td><td>{attribute.value}{attribute.needsVerification && <span className="ai-verify">Verify</span>}</td><td>{attribute.confidence}</td><td className="muted">{attribute.evidence}</td></tr>)}</tbody></table></div></div>}

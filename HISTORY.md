@@ -807,3 +807,23 @@ model configurations and per-task selection.
 - Added SQLite migration 10 and `npm run test_llm_models` covering default
   invariants, CRUD, owner isolation, legacy import, credential redaction, and
   safe Ollama URL validation.
+
+## 40. Catalog-grounded AI product recommendations — 2026-07-14
+
+> **Prompt:** Add a Product recommendations section to AI Analysis with up to
+> five real catalog products, rich product cards, and a reason for each choice.
+
+**Summary:** Product AI Analysis can now turn catalog context into verified
+cross-sell, substitute, upgrade, and adjacent-use recommendations.
+
+- The server ranks other products from the same analysis using shared taxonomy,
+  title and description relevance, and commercial signals, then hydrates only a
+  bounded shortlist with current BigCommerce descriptions, custom fields,
+  options, prices, inventory facts, identifiers, and image metadata.
+- The selected model may choose only product IDs in that shortlist. Unknown and
+  duplicate IDs are discarded, and all displayed product facts are reattached
+  from trusted server data rather than accepted from generated output.
+- Up to five responsive cards show thumbnail, linked title, categories, current
+  and sale price, SKU, product ID, and a specific recommendation reason.
+- Saved reviews and comprehensive product PDFs retain the recommendation cards
+  and safely retrievable thumbnails.

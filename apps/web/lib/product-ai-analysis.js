@@ -52,6 +52,10 @@ export const productAiAnalysisSchema = z.object({
     merchandisingCollections: z.array(z.string()).max(6),
     crossSellIdeas: z.array(z.string()).max(6),
   }),
+  productRecommendations: z.array(z.object({
+    productId: z.number().int(),
+    reason: z.string(),
+  })).max(5),
   feedAndDiscovery: z.object({
     googleProductCategory: z.string(),
     productType: z.string(),
@@ -108,6 +112,14 @@ their evidence, and use low/medium confidence. Prefer existing category IDs from
 the supplied taxonomy; set categoryId=null and isNewCategory=true only when a
 genuinely useful category is absent. Rewrites must be accurate, natural, useful,
 non-spammy, and ready to edit. Do not include HTML.
+
+For productRecommendations, choose no more than five products exclusively from
+productRecommendationCandidates. Never recommend the current product, invent a
+product ID, or copy candidate fields into the response. Select complementary,
+substitute, upgrade, or adjacent-use products only when the supplied catalog
+content supports the relationship. Each reason must be specific about why that
+product helps this shopper or merchandising context; return an empty array when
+none of the candidates is defensible.
 
 For images, use the numeric index in the text label immediately before each image. If there are no image
 parts, set imageReview.performed=false, leave its images empty, and explain the
@@ -231,6 +243,31 @@ export function attachAnalyzedImageThumbnails(result, analyzedImages) {
   return result;
 }
 
+/** Replace model-selected IDs with trusted, current details from the server shortlist. */
+export function attachProductRecommendationDetails(result, candidates) {
+  const byId = new Map((candidates || []).map((candidate) => [String(candidate.productId), candidate]));
+  const seen = new Set();
+  result.productRecommendations = (result.productRecommendations || [])
+    .flatMap((recommendation) => {
+      const key = String(recommendation.productId);
+      const candidate = byId.get(key);
+      if (!candidate || seen.has(key)) return [];
+      seen.add(key);
+      return [{
+        productId: candidate.productId,
+        title: candidate.title,
+        sku: candidate.sku,
+        categoryNames: candidate.categoryNames || [],
+        price: candidate.price,
+        salePrice: candidate.salePrice,
+        thumbnailUrl: candidate.thumbnailUrl || "",
+        reason: recommendation.reason,
+      }];
+    })
+    .slice(0, 5);
+  return result;
+}
+
 /** Generate a structured review; models without vision transparently retry text-only. */
 export async function analyzeProductWithAi({ settings, context, imageUrls = [], onProgress = () => {} }) {
   const selected = selectedModel(settings);
@@ -292,6 +329,7 @@ export async function analyzeProductWithAi({ settings, context, imageUrls = [], 
   if (result.imageReview.performed && images.length > 0) {
     attachAnalyzedImageThumbnails(result, images);
   }
+  attachProductRecommendationDetails(result, context.productRecommendationCandidates || []);
   return {
     provider: selected.provider,
     model: selected.modelId,

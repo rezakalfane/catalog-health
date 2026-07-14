@@ -99,6 +99,16 @@ const aiResult = {
     merchandisingCollections: ["Trail essentials", "Lightweight layering", "Changing-weather gear"],
     crossSellIdeas: ["Trail trousers", "Moisture-wicking base layer", "Packable rain cover", "Trail running vest"],
   },
+  productRecommendations: Array.from({ length: 5 }, (_, index) => ({
+    productId: 80 + index,
+    title: ["Summit Trail Trousers", "Merino Base Layer", "Nomad Running Vest", "Ridge Packable Shell", "Alpine Trail Backpack"][index],
+    sku: `REC-${80 + index}`,
+    categoryNames: index === 4 ? ["Accessories", "Trail equipment"] : ["Trail apparel"],
+    price: 59.95 + index * 20,
+    salePrice: index === 1 ? 64.95 : null,
+    thumbnailUrl,
+    reason: "This real catalog product supports the same trail use case and gives the shopper a relevant complementary option based on its title, category, and product description.",
+  })),
   feedAndDiscovery: {
     googleProductCategory: "Apparel & Accessories > Clothing > Outerwear > Coats & Jackets",
     productType: "Outerwear > Trail Jackets",
