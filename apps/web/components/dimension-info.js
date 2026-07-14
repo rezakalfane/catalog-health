@@ -9,7 +9,7 @@ export const dimensionInfo = {
     <>
       <p>How this product earns its content score:</p>
       <ul>
-        <li><strong>35 pts</strong> — description depth: 0 if missing, 15 under 200 chars, 28 under 500, full at 500+.</li>
+        <li><strong>35 pts</strong> — description depth uses the selected profile&apos;s minimum and good-length thresholds (Balanced uses 200 and 500 characters).</li>
         <li><strong>25 pts</strong> — images: 0 none, 12 one, full with 2+.</li>
         <li><strong>15 pts</strong> — alt text: scaled by the share of images that have it.</li>
         <li><strong>15 pts</strong> — title: 10–150 chars, not SKU-like (−5 if ALL CAPS).</li>
@@ -33,7 +33,7 @@ export const dimensionInfo = {
       <ul>
         <li><strong>60 pts</strong> — assigned to at least one category (0 for the whole dimension if not).</li>
         <li><strong>25 pts</strong> — every assigned category actually exists.</li>
-        <li><strong>15 pts</strong> — not over-categorized: at most 5 categories <em>within any single channel tree</em> (multi-storefront assignments are counted per channel).</li>
+        <li><strong>15 pts</strong> — not over-categorized: the selected profile sets the maximum categories <em>within any single channel tree</em> (multi-storefront assignments are counted per channel).</li>
       </ul>
     </>
   ),

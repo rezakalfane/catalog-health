@@ -46,6 +46,7 @@ const products = Array.from({ length: 18 }, (_, index) => ({
 
 const baseScoringMetadata = createScoringMetadata();
 const targetScoringMetadata = createScoringMetadata({
+  profile: "marketplace-readiness",
   semanticRequested: true,
   semanticApplied: true,
   semanticJudge: {
@@ -74,7 +75,12 @@ const comparison = {
     scoring: {
       known: true,
       comparable: false,
-      differences: ["semantic scoring inclusion"],
+      differences: [
+        "scoring profile",
+        "dimension weights",
+        "scoring thresholds",
+        "semantic scoring inclusion",
+      ],
     },
   },
   dimensions: ["content", "structure", "media", "commerce", "discoverability", "semantic"]

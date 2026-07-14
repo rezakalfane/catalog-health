@@ -3,6 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { listEnvironments, getSettings, createAnalysis } from "@/lib/api-client";
+import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
+import { getScoringProfile } from "@catalog-health/core/profiles";
 
 function NewAnalysisForm() {
   const router = useRouter();
@@ -14,6 +16,7 @@ function NewAnalysisForm() {
   const [error, setError] = useState("");
   const [llm, setLlm] = useState(null);
   const [semantic, setSemantic] = useState(true);
+  const selectedEnvironment = environments.find((env) => env.id === selected);
 
   useEffect(() => {
     listEnvironments().then((envs) => {
@@ -75,10 +78,16 @@ function NewAnalysisForm() {
             >
               {environments.map((env) => (
                 <option key={env.id} value={env.id}>
-                  {env.name} ({env.storeHash})
+                  {env.name} — {getScoringProfile(env.scoringProfileId).label}
                 </option>
               ))}
             </select>
+            {selectedEnvironment && (
+              <ScoringProfileSubtitle
+                profileId={selectedEnvironment.scoringProfileId}
+                description
+              />
+            )}
             {llm?.configured ? (
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 400 }}>
                 <input

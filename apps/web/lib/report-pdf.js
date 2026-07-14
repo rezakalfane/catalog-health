@@ -208,6 +208,7 @@ function scoringMetadataEntries(metadata) {
   const entries = [
     ["Versions", "Metadata schema", metadata.schemaVersion],
     ["Versions", "Scoring engine", metadata.engineVersion],
+    ["Versions", "Profile name", profile.label],
     ["Versions", "Scoring profile", profile.id],
     ["Versions", "Profile version", profile.version],
     ...Object.entries(profile.dimensionWeights || {}).map(([name, value]) => [

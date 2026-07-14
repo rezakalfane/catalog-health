@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { listEnvironments, saveEnvironment, deleteEnvironment } from "@/lib/api-client";
+import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
+import ScoringProfileSelect from "@/components/ScoringProfileSelect";
+import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
 
-const EMPTY = { name: "", storeHash: "", accessToken: "" };
+const EMPTY = {
+  name: "",
+  storeHash: "",
+  accessToken: "",
+  scoringProfileId: DEFAULT_SCORING_PROFILE_ID,
+};
 
 export default function EnvironmentsPage() {
   const [environments, setEnvironments] = useState([]);
@@ -21,7 +29,12 @@ export default function EnvironmentsPage() {
 
   function startEdit(env) {
     setEditingId(env.id);
-    setForm({ name: env.name, storeHash: env.storeHash, accessToken: "" });
+    setForm({
+      name: env.name,
+      storeHash: env.storeHash,
+      accessToken: "",
+      scoringProfileId: env.scoringProfileId || DEFAULT_SCORING_PROFILE_ID,
+    });
     setError("");
   }
 
@@ -89,6 +102,10 @@ export default function EnvironmentsPage() {
             placeholder="Products: read-only scope is enough"
             required={!editingId}
           />
+          <ScoringProfileSelect
+            value={form.scoringProfileId}
+            onChange={(scoringProfileId) => setForm({ ...form, scoringProfileId })}
+          />
           {error && <p className="error">{error}</p>}
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button type="submit" disabled={busy}>
@@ -125,6 +142,7 @@ export default function EnvironmentsPage() {
                 <tr key={env.id}>
                   <td>
                     <a href={`/environments/${env.id}`}>{env.name}</a>
+                    <ScoringProfileSubtitle profileId={env.scoringProfileId} />
                   </td>
                   <td>{env.storeHash}</td>
                   <td>{env.hasToken ? "set" : "missing"}</td>

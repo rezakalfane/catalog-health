@@ -1,7 +1,8 @@
 /**
  * Aggregation + reporting over analyzed rows.
  */
-import { grade, DIMENSION_WEIGHTS } from "./scoring.js";
+import { grade } from "./scoring.js";
+import { DIMENSION_WEIGHTS } from "./profiles.js";
 
 const mean = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
 

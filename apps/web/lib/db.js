@@ -9,6 +9,7 @@
  */
 import crypto from "node:crypto";
 import { getDb } from "@/lib/sqlite";
+import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
 import {
   encryptSecret,
   decryptSecret,
@@ -170,6 +171,7 @@ function toEnvironment(row) {
     name: row.name,
     storeHash: row.store_hash,
     accessToken: decryptSecret(row.access_token),
+    scoringProfileId: row.scoring_profile_id || DEFAULT_SCORING_PROFILE_ID,
     createdAt: row.created_at,
   };
 }
@@ -190,18 +192,26 @@ export function getEnvironment(userId, envId) {
   );
 }
 
-export function createEnvironment(userId, { name, storeHash, accessToken }) {
+export function createEnvironment(userId, {
+  name,
+  storeHash,
+  accessToken,
+  scoringProfileId = DEFAULT_SCORING_PROFILE_ID,
+}) {
   const env = {
     id: id(),
     name,
     storeHash,
     accessToken,
+    scoringProfileId,
     createdAt: new Date().toISOString(),
   };
   secureDb()
     .prepare(
-      `INSERT INTO environments (id, user_id, name, store_hash, access_token, created_at)
-       VALUES (@id, @userId, @name, @storeHash, @accessToken, @createdAt)`
+      `INSERT INTO environments
+        (id, user_id, name, store_hash, access_token, scoring_profile_id, created_at)
+       VALUES
+        (@id, @userId, @name, @storeHash, @accessToken, @scoringProfileId, @createdAt)`
     )
     .run({ ...env, userId, accessToken: encryptSecret(env.accessToken) });
   return env; // plaintext token, for server-side use
@@ -210,13 +220,14 @@ export function createEnvironment(userId, { name, storeHash, accessToken }) {
 export function updateEnvironment(userId, envId, patch) {
   const env = getEnvironment(userId, envId);
   if (!env) return null;
-  for (const key of ["name", "storeHash", "accessToken"]) {
+  for (const key of ["name", "storeHash", "accessToken", "scoringProfileId"]) {
     if (patch[key] !== undefined && patch[key] !== "") env[key] = patch[key];
   }
   secureDb()
     .prepare(
       `UPDATE environments SET name = @name, store_hash = @storeHash,
-        access_token = @accessToken WHERE id = @id AND user_id = @userId`
+        access_token = @accessToken, scoring_profile_id = @scoringProfileId
+       WHERE id = @id AND user_id = @userId`
     )
     .run({ ...env, userId, accessToken: encryptSecret(env.accessToken) });
   return env; // plaintext token, for server-side use
