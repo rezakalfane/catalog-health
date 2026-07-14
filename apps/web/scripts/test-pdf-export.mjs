@@ -2,12 +2,19 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createReportPdf } from "../lib/report-pdf.js";
+import { createReportPdf, normalizePdfText } from "../lib/report-pdf.js";
 import { createScoringMetadata } from "@catalog-health/core";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const outputDir = path.resolve(scriptDir, "../../../tmp/pdfs");
 const outputPath = path.join(outputDir, "catalog-health-test.pdf");
+const unicodeCatalogName = "Oksemørbrad St. América Grass";
+
+assert.equal(
+  normalizePdfText(unicodeCatalogName),
+  unicodeCatalogName,
+  "PDF text normalization must preserve Western-European characters"
+);
 
 const issueNames = [
   "missing_brand",
@@ -96,7 +103,7 @@ const pdf = await createReportPdf({
     summary,
     warning: "Semantic scoring covered 116 of 120 products; four products used deterministic scores only.",
   },
-  environmentName: "PDF export test catalog",
+  environmentName: `${unicodeCatalogName} - PDF export test catalog`,
 });
 
 const source = pdf.toString("latin1");

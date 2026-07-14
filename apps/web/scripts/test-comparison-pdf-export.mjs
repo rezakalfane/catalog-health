@@ -18,7 +18,9 @@ const issues = Array.from({ length: 20 }, (_, index) => ({
 
 const categories = Array.from({ length: 15 }, (_, index) => ({
   categoryId: index + 1,
-  categoryName: `Representative catalog category with a descriptive name ${index + 1}`,
+  categoryName: index === 0
+    ? "Oksemørbrad St. América Grass"
+    : `Representative catalog category with a descriptive name ${index + 1}`,
   baseScore: 52 + index,
   targetScore: 70 + index,
   scoreDelta: 18,

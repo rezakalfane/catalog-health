@@ -12,6 +12,7 @@ import ProductAiAnalysis, {
   ProductAiAnalysisAction,
   useProductAiAnalysis,
 } from "@/components/ProductAiAnalysis";
+import ActionIcon from "@/components/ActionIcon";
 
 // The three questions the semantic judge answers, in display order.
 const SEMANTIC_CRITERIA = [
@@ -148,7 +149,16 @@ export default function ProductDrilldownPage() {
           </p>
           </div>
         </div>
-        <ProductAiAnalysisAction state={aiAnalysis} />
+        <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
+          <a
+            className="btn secondary"
+            href={`/api/analyses/${id}/products/${productId}/pdf`}
+          >
+            <ActionIcon name="download" />
+            Export as PDF
+          </a>
+          <ProductAiAnalysisAction state={aiAnalysis} />
+        </div>
       </div>
 
       <div className="grid">

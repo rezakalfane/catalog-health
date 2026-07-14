@@ -90,11 +90,17 @@ npm run dev
   report with headline statistics, grade and dimension charts, common issues,
   weakest categories, and the ten highest-impact fixes. Filenames include the
   environment, analysis timestamp (UTC), and a short analysis id so repeated
-  runs never overwrite one another.
+  runs never overwrite one another. All PDF exports preserve accented
+  Western-European catalog text such as product, category, and environment
+  names while removing unsafe control characters.
 - **Product table & drill-down** — every analysis stores its full per-product
   results: browse them with filters (search, grade, issue, category, sort),
   export the filtered/sorted list as an Excel-friendly CSV, and open any
   product for its dimension scores, issues with fix hints, traffic and impact.
+  Each product detail can be exported as a comprehensive paginated PDF with
+  product facts, scoring evidence, semantic findings, and the complete saved AI
+  Analysis—including safely retrievable reviewed-image thumbnails—when one is
+  available.
 - **On-demand product AI Analysis** — from a product drill-down, use the LLM
   selected in Settings to generate a saved, merchant-ready review: prioritized
   fixes, revised title and descriptions, derived catalog fields, category and
@@ -129,6 +135,15 @@ npm run test_comparison_pdf_export
 
 It generates and validates a multi-page comparison report at
 `tmp/pdfs/catalog-health-comparison-test.pdf`.
+
+Product detail PDFs have a comprehensive representative smoke test:
+
+```bash
+npm run test_product_pdf_export
+```
+
+It validates both AI-enriched and no-AI reports and leaves the rendered source
+PDF at `tmp/pdfs/catalog-health-product-test.pdf` for visual inspection.
 
 The product AI workflow has an integration test for structured output,
 streamed stages, owner-scoped persistence, image binding, table indicators,
@@ -324,6 +339,8 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
 - [x] On-demand, persisted product AI Analysis with provider-aware structured
       recommendations, live-product/snapshot fallback, copy-ready fields, and
       safe multimodal image review where the selected model supports it
+- [x] Comprehensive product-detail PDF export with scoring evidence, semantic
+      findings, optional saved AI recommendations, and reviewed-image previews
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)
 - [x] Auth (Google SSO + dev login) and per-user multi-tenancy
