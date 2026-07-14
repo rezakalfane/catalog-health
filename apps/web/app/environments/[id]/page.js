@@ -20,6 +20,7 @@ import SemanticBadge from "@/components/SemanticBadge";
 import TopFixesTable from "@/components/TopFixesTable";
 import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
 import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
+import DeleteAnalysisButton from "@/components/DeleteAnalysisButton";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +33,9 @@ export default async function EnvironmentDetail({ params }) {
   reconcileInterruptedAnalyses();
   const runningAnalysis = findRunningAnalysis(user.id, id);
   const analyses = listCompletedAnalyses(user.id, id); // newest first
-  const latest = analyses[0];
-  const history = [...analyses]
+  const catalogAnalyses = analyses.filter((analysis) => !analysis.sourceAnalysisId);
+  const latest = catalogAnalyses[0];
+  const history = [...catalogAnalyses]
     .reverse()
     .map((a) => ({
       id: a.id,
@@ -94,7 +96,12 @@ export default async function EnvironmentDetail({ params }) {
                 <InfoPopover title="Score history">{sectionInfo.scoreHistory}</InfoPopover>
               </h2>
               <Sparkline points={history} width={280} height={64} />
-              <p className="muted">{analyses.length} analysis run{analyses.length === 1 ? "" : "s"}</p>
+              <p className="muted">
+                {catalogAnalyses.length} catalog run{catalogAnalyses.length === 1 ? "" : "s"}
+                {analyses.length > catalogAnalyses.length && (
+                  <> · {analyses.length - catalogAnalyses.length} profile recalculation{analyses.length - catalogAnalyses.length === 1 ? "" : "s"}</>
+                )}
+              </p>
             </div>
             <div className="card">
               <h2>
@@ -187,6 +194,7 @@ export default async function EnvironmentDetail({ params }) {
                 <th>Score</th>
                 <th>Grade</th>
                 <th>Duration</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -210,6 +218,7 @@ export default async function EnvironmentDetail({ params }) {
                   <td className="muted">—</td>
                   <td className="muted">—</td>
                   <td className="muted">—</td>
+                  <td className="muted">—</td>
                 </tr>
               )}
               {analyses.map((a) => (
@@ -219,6 +228,12 @@ export default async function EnvironmentDetail({ params }) {
                       {new Date(a.createdAt).toLocaleString()}
                     </Link>
                     <SemanticBadge analysis={a} />
+                    {a.sourceAnalysisId && (
+                      <span className="analysis-history-derived">
+                        recalculated from{" "}
+                        <Link href={`/analyses/${a.sourceAnalysisId}`}>source</Link>
+                      </span>
+                    )}
                   </td>
                   <td>
                     <ScoringProfileSubtitle
@@ -234,6 +249,9 @@ export default async function EnvironmentDetail({ params }) {
                   </td>
                   <td title={a.semanticMs != null ? `semantic ${formatDuration(a.semanticMs)}` : undefined}>
                     {formatDuration(a.durationMs)}
+                  </td>
+                  <td>
+                    <DeleteAnalysisButton analysisId={a.id} iconOnly />
                   </td>
                 </tr>
               ))}

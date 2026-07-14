@@ -67,7 +67,9 @@ npm run dev
   impact-weighted top-fix list. Top fixes support product/SKU search, grade
   filtering, sortable columns, and filtered/sorted CSV export; analysis pages
   show up to 100 matches while environment overviews remain capped at 15.
-  Environment analysis history includes the profile captured by each run.
+  Environment analysis history includes the profile captured by each run and
+  a compact red trash action with confirmation for completed reports. A full
+  **Delete analysis** button is also available from the report itself.
 - **Analysis comparison** — from a completed analysis, choose any of the ten
   immediately preceding runs from the same environment. The picker shows each
   run's date, product count, score, grade, duration, and semantic-scoring tag.
@@ -75,6 +77,13 @@ npm run dev
   issue and category changes, and sortable product-by-product resolved/new
   issue details. Export the current filtered/sorted product changes as CSV or
   download the complete comparison summary as a paginated PDF.
+- **Profile recalculation** — replay any completed analysis under another
+  static profile using the exact product facts and semantic verdicts captured
+  by the original run. Recalculation makes no BigCommerce or LLM calls, leaves
+  the environment default and source analysis untouched, and saves a linked
+  derived analysis with a one-click comparison back to its source.
+  Derived reports remain visible in history but do not replace the latest
+  live-catalog result or alter environment score trends.
 - **PDF report export** — download a completed analysis as a polished A4
   report with headline statistics, grade and dimension charts, common issues,
   weakest categories, and the ten highest-impact fixes. Filenames include the
@@ -129,6 +138,20 @@ Analysis history table shows the profile used for that specific run.
 The current static definitions live in `packages/core/src/profiles.js`. Their
 shape is designed to support future user-created profiles, custom weights, and
 per-rule enable/disable controls without changing stored analysis snapshots.
+
+On a completed analysis, **Recalculate** offers every profile other than the
+one already used. The scoring engine rebuilds all product scores, issues,
+grades, impact rankings, dimension averages, category rollups, and headline
+statistics from the stored facts. If semantic scoring was applied, its saved
+per-criterion verdicts are reused rather than sent to a model again. Analyses
+that predate per-product scoring facts cannot be recalculated.
+
+The rollback-only integration test exercises the complete replay and SQLite
+lineage flow without leaving fixture data behind:
+
+```bash
+npm run test_analysis_recalculation
+```
 
 ### Balanced profile dimensions
 
@@ -219,6 +242,10 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
   schema, and migrations (append a block to `MIGRATIONS`; versions tracked
   via `PRAGMA user_version`). Tables: `environments`, `analyses`,
   `analysis_products` (per-product results, FK-cascaded), `settings`.
+  Recalculated analyses retain a nullable self-reference to their source;
+  deleting the source clears that link without deleting the derived report.
+  Deleting an analysis cascades to its stored per-product rows, while analyses
+  still in progress are protected from deletion.
 - A leftover `data/db.json` from the previous JSON-file store is imported
   automatically on first run and renamed to `db.json.migrated`.
 - **Secrets are encrypted at rest** (AES-256-GCM) when `APP_ENCRYPTION_KEY`
@@ -263,9 +290,11 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
 - [x] Static scoring profiles with per-environment selection, profile-aware
       thresholds and weights, immutable analysis metadata, and PDF/comparison
       visibility
-- [ ] Recalculate an existing analysis with another profile using its stored
+- [x] Recalculate an existing analysis with another profile using its stored
       scoring facts, preserve the original analysis, and link the derived run
       back to its source for one-click comparison
+- [x] Delete completed analyses from history or the report, cascade stored
+      product rows, preserve derived reports, and protect active runs
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)
 - [x] Auth (Google SSO + dev login) and per-user multi-tenancy

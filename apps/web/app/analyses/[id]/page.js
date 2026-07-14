@@ -12,6 +12,8 @@ import CompareAnalysisMenu from "@/components/CompareAnalysisMenu";
 import ScoringMetadataLine from "@/components/ScoringMetadataLine";
 import ScoringMetadataPanel from "@/components/ScoringMetadataPanel";
 import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
+import RecalculateProfileMenu from "@/components/RecalculateProfileMenu";
+import DeleteAnalysisButton from "@/components/DeleteAnalysisButton";
 import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
 
 export default function AnalysisPage() {
@@ -98,6 +100,12 @@ export default function AnalysisPage() {
             {status === "done" && (
               <ScoringMetadataLine metadata={analysis?.scoringMetadata} />
             )}
+            {status === "done" && analysis?.sourceAnalysisId && (
+              <span className="analysis-meta-line">
+                Recalculated from the stored facts of the{" "}
+                <Link href={`/analyses/${analysis.sourceAnalysisId}`}>source analysis</Link>.
+              </span>
+            )}
           </p>
         </div>
         {status === "running" && progress && (
@@ -137,6 +145,23 @@ export default function AnalysisPage() {
               <ActionIcon name="download" />
               Export as PDF
             </a>
+            {analysis.hasScoringFacts && (
+              <RecalculateProfileMenu
+                analysisId={id}
+                currentProfileId={
+                  analysis.scoringMetadata?.profile?.id || DEFAULT_SCORING_PROFILE_ID
+                }
+              />
+            )}
+            {analysis.sourceAnalysisId && (
+              <Link
+                className="btn secondary"
+                href={`/analyses/compare?base=${analysis.sourceAnalysisId}&target=${id}`}
+              >
+                <ActionIcon name="compare" />
+                Compare with source
+              </Link>
+            )}
             <CompareAnalysisMenu analysisId={id} analyses={comparisonAnalyses} />
             {analysis.hasRows && (
               <Link className="btn secondary" href={`/analyses/${id}/products`}>
@@ -148,6 +173,7 @@ export default function AnalysisPage() {
               <ActionIcon name={isDemo ? "arrowLeft" : "store"} />
               {isDemo ? "Back to dashboard" : "View environment"}
             </Link>
+            <DeleteAnalysisButton analysisId={id} redirectHref={envHref} />
           </div>
         )}
       </div>

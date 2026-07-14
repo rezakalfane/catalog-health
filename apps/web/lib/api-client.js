@@ -104,6 +104,11 @@ export function getAnalysis(id) {
   return request(`/api/analyses/${id}`);
 }
 
+/** Permanently delete one completed analysis and its product rows. */
+export function deleteAnalysis(id) {
+  return request(`/api/analyses/${id}`, { method: "DELETE" });
+}
+
 /** The per-product rows and lookup tables for an analysis. */
 export function getAnalysisProducts(id) {
   return request(`/api/analyses/${id}/products`);
@@ -118,6 +123,11 @@ export function compareAnalyses(base, target) {
 /** Start a new analysis; resolves with the created `{ id }`. */
 export function createAnalysis(payload) {
   return jsonRequest("/api/analyses", "POST", payload);
+}
+
+/** Recalculate a completed analysis from its stored facts under another profile. */
+export function recalculateAnalysis(id, profileId) {
+  return jsonRequest(`/api/analyses/${id}/recalculate`, "POST", { profileId });
 }
 
 /** Ask the runner to skip the semantic-scoring stage of a running analysis. */

@@ -8,14 +8,14 @@
  * getAnalysisRows) but WITH a cheap `hasRows` flag.
  */
 import crypto from "node:crypto";
-import { getDb } from "@/lib/sqlite";
+import { getDb } from "./sqlite.js";
 import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
 import {
   encryptSecret,
   decryptSecret,
   isEncrypted,
   hasEncryptionKey,
-} from "@/lib/crypto";
+} from "./crypto.js";
 
 const id = () => crypto.randomUUID();
 const parse = (s) => (s == null ? null : JSON.parse(s));
@@ -265,7 +265,13 @@ export function redactEnvironment(env) {
 const ANALYSIS_COLS = `
   a.id, a.environment_id, a.created_at, a.status, a.progress, a.summary,
   a.error, a.warning, a.duration_ms, a.semantic_ms, a.scoring_metadata,
-  EXISTS (SELECT 1 FROM analysis_products p WHERE p.analysis_id = a.id) AS has_rows
+  a.source_analysis_id,
+  EXISTS (SELECT 1 FROM analysis_products p WHERE p.analysis_id = a.id) AS has_rows,
+  EXISTS (SELECT 1 FROM analysis_products p WHERE p.analysis_id = a.id)
+    AND NOT EXISTS (
+      SELECT 1 FROM analysis_products p
+      WHERE p.analysis_id = a.id AND p.details IS NULL
+    ) AS has_scoring_facts
 `;
 
 function toAnalysis(row, { withCatalog = false } = {}) {
@@ -282,7 +288,9 @@ function toAnalysis(row, { withCatalog = false } = {}) {
     durationMs: row.duration_ms ?? null,
     semanticMs: row.semantic_ms ?? null,
     scoringMetadata: parse(row.scoring_metadata),
+    sourceAnalysisId: row.source_analysis_id ?? null,
     hasRows: Boolean(row.has_rows),
+    hasScoringFacts: Boolean(row.has_scoring_facts),
   };
   if (withCatalog) analysis.catalog = parse(row.catalog);
   return analysis;
@@ -349,6 +357,20 @@ export function getAnalysis(userId, analysisId) {
   return toAnalysis(row, { withCatalog: true });
 }
 
+/** Delete one completed analysis owned by the user; product rows cascade. */
+export function deleteAnalysis(userId, analysisId) {
+  const db = getDb();
+  const analysis = db
+    .prepare("SELECT status FROM analyses WHERE id = ? AND user_id = ?")
+    .get(analysisId, userId);
+  if (!analysis) return { deleted: false, reason: "not_found" };
+  if (analysis.status === "running") return { deleted: false, reason: "running" };
+  const result = db
+    .prepare("DELETE FROM analyses WHERE id = ? AND user_id = ?")
+    .run(analysisId, userId);
+  return { deleted: result.changes > 0, reason: null };
+}
+
 /** Per-product rows for one analysis, scoped to its owner. */
 export function getAnalysisRows(userId, analysisId) {
   return getDb()
@@ -382,6 +404,7 @@ export function createAnalysis({
   status = "done",
   progress = null,
   scoringMetadata = null,
+  sourceAnalysisId = null,
 }) {
   const analysis = {
     id: id(),
@@ -393,13 +416,15 @@ export function createAnalysis({
     error: null,
     warning: null,
     scoringMetadata,
+    sourceAnalysisId,
     hasRows: false,
+    hasScoringFacts: false,
   };
   getDb()
     .prepare(
       `INSERT INTO analyses
-         (id, user_id, environment_id, created_at, status, progress, summary, scoring_metadata)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+         (id, user_id, environment_id, created_at, status, progress, summary, scoring_metadata, source_analysis_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       analysis.id,
@@ -409,7 +434,8 @@ export function createAnalysis({
       status,
       progress ? JSON.stringify(progress) : null,
       summary ? JSON.stringify(summary) : null,
-      scoringMetadata ? JSON.stringify(scoringMetadata) : null
+      scoringMetadata ? JSON.stringify(scoringMetadata) : null,
+      sourceAnalysisId
     );
   return analysis;
 }

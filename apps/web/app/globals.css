@@ -149,6 +149,28 @@ button:hover, .btn:hover { filter: brightness(1.08); text-decoration: none; }
 button:disabled { opacity: 0.5; cursor: default; }
 button.secondary, .btn.secondary { background: var(--signal-soft); color: var(--signal); }
 button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem 0.5rem; }
+.delete-analysis-control {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+button.delete-analysis-button {
+  background: var(--grade-f);
+  color: #fff;
+  white-space: nowrap;
+}
+button.delete-analysis-button.icon-only {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border-radius: 5px;
+}
+button.delete-analysis-button.icon-only .action-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+.delete-analysis-error { max-width: 16rem; }
 .action-icon {
   width: 1em;
   height: 1em;
@@ -195,6 +217,21 @@ button.danger { background: transparent; color: var(--grade-f); padding: 0.35rem
   border-radius: 5px;
   font-size: 0.75rem;
 }
+.recalculate-menu-note {
+  margin: 0.35rem 0.55rem 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.recalculate-menu-item {
+  width: 100%;
+  align-items: flex-start;
+  background: transparent;
+  text-align: left;
+  font-weight: 400;
+}
+.recalculate-menu-item:hover { filter: none; }
+.recalculate-menu-error { margin: 0.45rem 0.55rem; }
 
 /* Grade lozenge — the signature element ------------------------------------- */
 .lozenge {
@@ -453,6 +490,12 @@ a.progress-link:hover .progress-top { color: var(--signal); }
   height: 0.95rem;
 }
 .analysis-meta-line { display: block; }
+.analysis-history-derived {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+}
 .scoring-meta-part { display: block; }
 
 /* Environment scoring profiles -------------------------------------------- */
