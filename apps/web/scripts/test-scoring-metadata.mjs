@@ -9,6 +9,8 @@ import {
   getScoringProfile,
   isScoringProfileId,
   analyzeCatalog,
+  applySemanticVerdicts,
+  rescoreCatalogRows,
   demoCatalog,
 } from "@catalog-health/core";
 
@@ -31,6 +33,50 @@ const profileAverages = SCORING_PROFILES.map((profile) => {
 assert.ok(
   new Set(profileAverages).size > 1,
   "static profiles must produce meaningfully different scores"
+);
+
+const balancedRows = analyzeCatalog(demo.products, demo.categories);
+const storedCategories = demo.categories.map((category) => ({
+  id: category.category_id ?? category.id,
+  name: category.name,
+  treeId: category.tree_id ?? null,
+}));
+const scoreShape = (rows) => rows.map((row) => ({
+  id: row.id,
+  overall: row.overall,
+  grade: row.grade,
+  impact: row.impact,
+  scores: row.scores,
+  issues: row.issues,
+}));
+assert.deepEqual(
+  scoreShape(rescoreCatalogRows(balancedRows, storedCategories, DEFAULT_SCORING_PROFILE_ID)),
+  scoreShape(balancedRows),
+  "replaying the source profile must reproduce its product scores exactly"
+);
+assert.notDeepEqual(
+  scoreShape(rescoreCatalogRows(balancedRows, storedCategories, "content-quality")),
+  scoreShape(balancedRows),
+  "replaying another profile must recalculate product scores"
+);
+
+const verdict = {
+  what_it_is: { verdict: "yes", reason: "Clear product type." },
+  who_its_for: { verdict: "partial", reason: "Audience is implied." },
+  made_of: { verdict: "no", reason: "Materials are missing." },
+};
+const semanticRows = applySemanticVerdicts(
+  balancedRows,
+  new Map([[balancedRows[0].id, verdict]])
+);
+assert.deepEqual(
+  scoreShape(rescoreCatalogRows(semanticRows, storedCategories, DEFAULT_SCORING_PROFILE_ID)),
+  scoreShape(semanticRows),
+  "stored semantic verdicts must replay without another model call"
+);
+assert.throws(
+  () => rescoreCatalogRows([{ ...balancedRows[0], details: null }], storedCategories),
+  /predates stored scoring facts/
 );
 
 const heuristic = createScoringMetadata();

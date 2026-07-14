@@ -125,6 +125,13 @@ const MIGRATIONS = [
   `
   ALTER TABLE environments ADD COLUMN scoring_profile_id TEXT NOT NULL DEFAULT 'catalog-health-default';
   `,
+
+  // 8 — derived analyses created by replaying a completed analysis with a
+  // different scoring profile. The source is retained for one-click compare.
+  `
+  ALTER TABLE analyses ADD COLUMN source_analysis_id TEXT REFERENCES analyses(id) ON DELETE SET NULL;
+  CREATE INDEX idx_analyses_source ON analyses (source_analysis_id);
+  `,
 ];
 
 function migrate(db) {

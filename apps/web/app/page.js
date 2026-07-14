@@ -18,6 +18,9 @@ export default async function Dashboard() {
   const latestByEnv = new Map();
   const historyByEnv = new Map();
   for (const a of [...analyses].reverse()) {
+    // Profile recalculations are scenario reports over an existing snapshot;
+    // they must not replace the latest live-catalog health or distort trends.
+    if (a.sourceAnalysisId) continue;
     // oldest -> newest
     if (!historyByEnv.has(a.environmentId)) historyByEnv.set(a.environmentId, []);
     historyByEnv.get(a.environmentId).push({

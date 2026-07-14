@@ -324,3 +324,90 @@ export function analyzeCatalog(products, categories, profileOrId) {
     };
   });
 }
+
+/**
+ * Re-run scoring against the immutable facts stored with a completed analysis.
+ * This deliberately avoids fetching the live catalog or invoking the semantic
+ * judge: saved semantic verdicts are replayed when the source analysis used
+ * them. The returned rows keep the original drill-down facts intact.
+ */
+export function rescoreCatalogRows(rows, categories, profileOrId) {
+  const profile = getScoringProfile(profileOrId);
+  const descriptionCap = Math.max(50, profile.thresholds.goodDescriptionChars) + 1;
+
+  const products = rows.map((row) => {
+    const details = row.details;
+    if (!details) {
+      throw new Error("This analysis predates stored scoring facts and cannot be recalculated.");
+    }
+
+    const imageCount = Math.max(0, details.imageCount || 0);
+    const imagesWithAlt = Math.min(imageCount, Math.max(0, details.imagesWithAlt || 0));
+    const optionCount = Math.max(0, details.optionCount || 0);
+    const incompleteVariants = Math.max(0, details.incompleteVariants || 0);
+    const descriptionChars = Math.min(
+      descriptionCap,
+      Math.max(0, details.descriptionChars || 0)
+    );
+
+    return {
+      id: row.id,
+      sku: row.sku,
+      name: row.name,
+      description: "x".repeat(descriptionChars),
+      images: Array.from({ length: imageCount }, (_, index) => ({
+        description: index < imagesWithAlt ? "alt" : "",
+      })),
+      brand_id: details.hasBrand ? 1 : 0,
+      custom_fields: Array.from({ length: Math.max(0, details.customFieldCount || 0) }),
+      gtin: details.gtin || "",
+      upc: details.upc || "",
+      mpn: details.mpn || "",
+      options: Array.from({ length: optionCount }),
+      variants: optionCount
+        ? [
+            {
+              option_values: incompleteVariants
+                ? []
+                : Array.from({ length: optionCount }),
+            },
+          ]
+        : [],
+      categories: row.categories || [],
+      price: details.price ?? 0,
+      sale_price: details.salePrice ?? 0,
+      weight: details.weight ?? 0,
+      is_visible: details.isVisible !== false,
+      inventory_tracking: details.inventoryTracking || "none",
+      inventory_level: details.inventoryLevel ?? 0,
+      view_count: row.viewCount ?? 0,
+      total_sold: row.totalSold ?? 0,
+    };
+  });
+
+  const normalizedCategories = (categories || []).map((category) => ({
+    ...category,
+    tree_id: category.tree_id ?? category.treeId ?? null,
+  }));
+  let rescored = analyzeCatalog(products, normalizedCategories, profile);
+
+  const semanticApplied = rows.some((row) => row.scores?.semantic != null);
+  if (semanticApplied) {
+    const verdicts = new Map(
+      rows
+        .filter((row) => row.semantic && !row.semantic.unevaluated)
+        .map((row) => [row.id, row.semantic])
+    );
+    rescored = applySemanticVerdicts(rescored, verdicts, profile);
+  }
+
+  const sourceById = new Map(rows.map((row) => [row.id, row]));
+  return rescored.map((row) => {
+    const source = sourceById.get(row.id);
+    return {
+      ...row,
+      details: source.details,
+      semantic: semanticApplied ? row.semantic : source.semantic,
+    };
+  });
+}
