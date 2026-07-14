@@ -7,6 +7,8 @@ const COLORS = {
   line: "#e3e7f0",
   signal: "#3b5eea",
   signalSoft: "#eaeefd",
+  changedSoft: "#fff8e8",
+  changedInk: "#72510a",
   white: "#ffffff",
   grades: {
     A: "#158a5c",
@@ -96,7 +98,7 @@ function createRenderer(doc, meta) {
     doc.y += 10;
   }
 
-  function table({ columns, rows, minRowHeight = 22 }) {
+  function table({ columns, rows, minRowHeight = 22, rowFill }) {
     const x = PAGE.margin;
     const headerHeight = 23;
 
@@ -134,6 +136,8 @@ function createRenderer(doc, meta) {
         header();
       }
       const rowY = doc.y;
+      const fill = rowFill?.(row);
+      if (fill) doc.rect(x, rowY, CONTENT_WIDTH, rowHeight).fill(fill);
       let cellX = x;
       for (const column of columns) {
         const value = clean(row[column.key]);
@@ -183,6 +187,76 @@ function createRenderer(doc, meta) {
   }
 
   return { addPage, ensureSpace, sectionTitle, table, finishFooters };
+}
+
+function percent(value) {
+  return value == null ? "-" : `${Math.round(Number(value) * 100)}%`;
+}
+
+function yesNo(value) {
+  return value == null ? "-" : value ? "Yes" : "No";
+}
+
+function metadataLabel(value) {
+  return titleCase(String(value).replace(/([a-z0-9])([A-Z])/g, "$1 $2"));
+}
+
+function scoringMetadataEntries(metadata) {
+  if (!metadata) return [];
+  const profile = metadata.profile || {};
+  const semantic = metadata.semantic || {};
+  const entries = [
+    ["Versions", "Metadata schema", metadata.schemaVersion],
+    ["Versions", "Scoring engine", metadata.engineVersion],
+    ["Versions", "Scoring profile", profile.id],
+    ["Versions", "Profile version", profile.version],
+    ...Object.entries(profile.dimensionWeights || {}).map(([name, value]) => [
+      "Dimension weights",
+      metadataLabel(name),
+      percent(value),
+    ]),
+    ...Object.entries(profile.thresholds || {}).map(([name, value]) => [
+      "Scoring thresholds",
+      metadataLabel(name),
+      value,
+    ]),
+    ["Semantic scoring", "Requested", yesNo(semantic.requested)],
+    ["Semantic scoring", "Applied", yesNo(semantic.applied)],
+    ["Semantic scoring", "Score weight", percent(profile.semanticWeight)],
+    ["Semantic scoring", "Prompt version", semantic.promptVersion],
+    ["Semantic scoring", "Provider", semantic.provider],
+    ["Semantic scoring", "Model", semantic.model],
+    ["Semantic scoring", "Judge", semantic.judgeLabel],
+  ];
+
+  return entries.map(([group, setting, value]) => ({
+    group,
+    setting,
+    value: value ?? "-",
+  }));
+}
+
+function comparisonScoringMetadataEntries(base, target) {
+  const baseEntries = scoringMetadataEntries(base);
+  const targetEntries = scoringMetadataEntries(target);
+  const baseByKey = new Map(baseEntries.map((entry) => [`${entry.group}:${entry.setting}`, entry]));
+  const targetByKey = new Map(targetEntries.map((entry) => [`${entry.group}:${entry.setting}`, entry]));
+  const keys = [...new Set([...baseByKey.keys(), ...targetByKey.keys()])];
+
+  return keys.map((key) => {
+    const previous = baseByKey.get(key);
+    const current = targetByKey.get(key);
+    const baseValue = previous?.value ?? "-";
+    const targetValue = current?.value ?? "-";
+    return {
+      group: current?.group || previous?.group,
+      setting: current?.setting || previous?.setting,
+      base: baseValue,
+      target: targetValue,
+      status: baseValue === targetValue ? "" : "Changed",
+      changed: baseValue !== targetValue,
+    };
+  });
 }
 
 function drawStat(doc, x, y, width, label, value, accent = COLORS.signal) {
@@ -292,6 +366,19 @@ export function createReportPdf({ analysis, environmentName }) {
       .text(`Analysis started ${formatDate(analysis.createdAt)} UTC`, PAGE.margin, doc.y + 3);
     const duration = formatDuration(analysis.durationMs);
     if (duration) doc.text(`Completed in ${duration}`, PAGE.margin, doc.y + 3);
+    if (analysis.scoringMetadata) {
+      const metadata = analysis.scoringMetadata;
+      const profile = metadata.profile || {};
+      const semantic = metadata.semantic || {};
+      const semanticText = semantic.applied
+        ? ` | semantic ${semantic.judgeLabel || semantic.model || "judge"} | prompt ${semantic.promptVersion}`
+        : "";
+      doc.text(
+        `Scoring engine ${metadata.engineVersion} | ${profile.id || "profile"} ${profile.version || ""}${semanticText}`,
+        PAGE.margin,
+        doc.y + 3
+      );
+    }
     doc.y += 20;
 
     const statGap = 8;
@@ -312,6 +399,26 @@ export function createReportPdf({ analysis, environmentName }) {
     drawGradeChart(doc, summary, PAGE.margin, chartY, chartWidth, chartHeight);
     drawDimensionChart(doc, summary, PAGE.margin + chartWidth + chartGap, chartY, chartWidth);
     doc.y = chartY + chartHeight + 23;
+
+    renderer.sectionTitle(
+      "Scoring metadata",
+      "The exact scoring configuration captured when this analysis ran."
+    );
+    if (analysis.scoringMetadata) {
+      renderer.table({
+        columns: [
+          { key: "group", label: "Group", width: 125, bold: true, fontSize: 7.5 },
+          { key: "setting", label: "Setting", width: 202, fontSize: 7.5 },
+          { key: "value", label: "Value", width: 180, fontSize: 7.5 },
+        ],
+        rows: scoringMetadataEntries(analysis.scoringMetadata),
+      });
+    } else {
+      renderer.table({
+        columns: [{ key: "message", label: "Status", width: CONTENT_WIDTH }],
+        rows: [{ message: "This legacy analysis predates scoring metadata snapshots." }],
+      });
+    }
 
     renderer.ensureSpace(100);
     renderer.sectionTitle("Most common issues", "The ten issue types affecting the most products.");
@@ -458,7 +565,7 @@ export function createComparisonReportPdf({ comparison, environmentName }) {
     );
     doc.y = statY + 78;
 
-    if (!comparison.summary.semanticComparable) {
+    if (!comparison.summary.scoring.comparable) {
       renderer.ensureSpace(58);
       const noteY = doc.y;
       doc.roundedRect(PAGE.margin, noteY, CONTENT_WIDTH, 43, 4).fill(COLORS.signalSoft);
@@ -472,12 +579,50 @@ export function createComparisonReportPdf({ comparison, environmentName }) {
         .fontSize(8)
         .fillColor(COLORS.ink)
         .text(
-          "These analyses use different scoring formulas because semantic scoring is present in only one run.",
+          comparison.summary.scoring.known
+            ? `These analyses use different scoring configurations (${comparison.summary.scoring.differences.join(", ")}). Score changes may also reflect formula differences.`
+            : "Scoring metadata is unavailable for one or both legacy analyses, so formula compatibility cannot be verified.",
           PAGE.margin + 12,
           noteY + 22,
           { width: CONTENT_WIDTH - 24 }
         );
       doc.y = noteY + 60;
+    }
+
+    renderer.sectionTitle(
+      "Scoring metadata",
+      "Previous and current scoring configurations. Changed values are shaded."
+    );
+    if (comparison.base.scoringMetadata && comparison.target.scoringMetadata) {
+      renderer.table({
+        minRowHeight: 21,
+        rowFill: (row) => row.changed ? COLORS.changedSoft : null,
+        columns: [
+          { key: "group", label: "Group", width: 95, bold: true, fontSize: 7 },
+          { key: "setting", label: "Setting", width: 122, fontSize: 7.2 },
+          { key: "base", label: "Previous", width: 105, fontSize: 7.2 },
+          { key: "target", label: "Current", width: 120, fontSize: 7.2 },
+          {
+            key: "status",
+            label: "Status",
+            width: 65,
+            bold: true,
+            fontSize: 6.8,
+            color: (row) => row.changed ? COLORS.changedInk : COLORS.soft,
+          },
+        ],
+        rows: comparisonScoringMetadataEntries(
+          comparison.base.scoringMetadata,
+          comparison.target.scoringMetadata
+        ),
+      });
+    } else {
+      renderer.table({
+        columns: [{ key: "message", label: "Status", width: CONTENT_WIDTH }],
+        rows: [{
+          message: "Metadata is unavailable for one or both legacy analyses, so their scoring configurations cannot be compared.",
+        }],
+      });
     }
 
     renderer.sectionTitle("Dimension changes", "Average dimension scores across the two analyses.");

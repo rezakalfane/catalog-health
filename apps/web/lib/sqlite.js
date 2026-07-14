@@ -113,6 +113,12 @@ const MIGRATIONS = [
   ALTER TABLE analyses ADD COLUMN duration_ms INTEGER;
   ALTER TABLE analyses ADD COLUMN semantic_ms INTEGER;
   `,
+
+  // 6 — immutable scoring-engine/profile snapshot used to validate whether
+  // two analyses were produced by genuinely comparable formulas.
+  `
+  ALTER TABLE analyses ADD COLUMN scoring_metadata TEXT; -- JSON
+  `,
 ];
 
 function migrate(db) {

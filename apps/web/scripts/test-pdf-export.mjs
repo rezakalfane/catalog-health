@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createReportPdf } from "../lib/report-pdf.js";
+import { createScoringMetadata } from "@catalog-health/core";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const outputDir = path.resolve(scriptDir, "../../../tmp/pdfs");
@@ -82,6 +83,15 @@ const pdf = await createReportPdf({
   analysis: {
     createdAt: "2026-07-13T08:42:00Z",
     durationMs: 185_000,
+    scoringMetadata: createScoringMetadata({
+      semanticRequested: true,
+      semanticApplied: true,
+      semanticJudge: {
+        provider: "anthropic",
+        model: "claude-test-model",
+        label: "claude-test-model",
+      },
+    }),
     summary,
     warning: "Semantic scoring covered 116 of 120 products; four products used deterministic scores only.",
   },
@@ -94,7 +104,7 @@ const pageCount = source.match(/\/Type \/Page\b/g)?.length || 0;
 assert.equal(pdf.subarray(0, 5).toString(), "%PDF-", "output must have a PDF signature");
 assert.match(source.slice(-32), /%%EOF/, "output must have a PDF end marker");
 assert.ok(pdf.length > 5_000, "output must contain a non-trivial report");
-assert.equal(pageCount, 2, "representative report must fit on two pages");
+assert.ok(pageCount >= 3, "representative report with scoring metadata should span at least three pages");
 
 fs.mkdirSync(outputDir, { recursive: true });
 fs.writeFileSync(outputPath, pdf);

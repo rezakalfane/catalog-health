@@ -253,7 +253,7 @@ export function redactEnvironment(env) {
 
 const ANALYSIS_COLS = `
   a.id, a.environment_id, a.created_at, a.status, a.progress, a.summary,
-  a.error, a.warning, a.duration_ms, a.semantic_ms,
+  a.error, a.warning, a.duration_ms, a.semantic_ms, a.scoring_metadata,
   EXISTS (SELECT 1 FROM analysis_products p WHERE p.analysis_id = a.id) AS has_rows
 `;
 
@@ -270,6 +270,7 @@ function toAnalysis(row, { withCatalog = false } = {}) {
     warning: row.warning ?? null,
     durationMs: row.duration_ms ?? null,
     semanticMs: row.semantic_ms ?? null,
+    scoringMetadata: parse(row.scoring_metadata),
     hasRows: Boolean(row.has_rows),
   };
   if (withCatalog) analysis.catalog = parse(row.catalog);
@@ -363,7 +364,14 @@ export function getAnalysisRows(userId, analysisId) {
     }));
 }
 
-export function createAnalysis({ userId, environmentId, summary = null, status = "done", progress = null }) {
+export function createAnalysis({
+  userId,
+  environmentId,
+  summary = null,
+  status = "done",
+  progress = null,
+  scoringMetadata = null,
+}) {
   const analysis = {
     id: id(),
     environmentId,
@@ -373,12 +381,14 @@ export function createAnalysis({ userId, environmentId, summary = null, status =
     summary,
     error: null,
     warning: null,
+    scoringMetadata,
     hasRows: false,
   };
   getDb()
     .prepare(
-      `INSERT INTO analyses (id, user_id, environment_id, created_at, status, progress, summary)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO analyses
+         (id, user_id, environment_id, created_at, status, progress, summary, scoring_metadata)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       analysis.id,
@@ -387,13 +397,14 @@ export function createAnalysis({ userId, environmentId, summary = null, status =
       analysis.createdAt,
       status,
       progress ? JSON.stringify(progress) : null,
-      summary ? JSON.stringify(summary) : null
+      summary ? JSON.stringify(summary) : null,
+      scoringMetadata ? JSON.stringify(scoringMetadata) : null
     );
   return analysis;
 }
 
 /**
- * Patch an analysis. JSON fields (progress/summary/catalog) are replaced
+ * Patch an analysis. JSON fields (progress/summary/catalog/scoringMetadata) are replaced
  * wholesale; a `rows` array replaces the per-product results.
  */
 export function updateAnalysis(analysisId, patch) {
@@ -408,9 +419,10 @@ export function updateAnalysis(analysisId, patch) {
       args[key] = patch[key];
     }
   }
-  for (const key of ["progress", "summary", "catalog"]) {
+  for (const key of ["progress", "summary", "catalog", "scoringMetadata"]) {
     if (key in patch) {
-      sets.push(`${key} = @${key}`);
+      const column = key === "scoringMetadata" ? "scoring_metadata" : key;
+      sets.push(`${column} = @${key}`);
       args[key] = patch[key] == null ? null : JSON.stringify(patch[key]);
     }
   }

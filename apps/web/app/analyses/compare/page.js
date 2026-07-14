@@ -8,6 +8,7 @@ import ProductThumb from "@/components/ProductThumb";
 import { issueLabel } from "@/components/issue-info";
 import { compareAnalyses } from "@/lib/api-client";
 import ActionIcon from "@/components/ActionIcon";
+import ScoringMetadataPanel from "@/components/ScoringMetadataPanel";
 
 const STATUS_RANK = { changed: 0, added: 1, removed: 2, unchanged: 3 };
 const GRADE_RANK = { A: 0, B: 1, C: 2, D: 3, F: 4 };
@@ -253,10 +254,14 @@ function ComparePageInner() {
         </div>
       </div>
 
-      {!data.summary.semanticComparable && (
+      {!data.summary.scoring.comparable && (
         <div className="card" style={{ borderLeft: "4px solid var(--grade-c)" }}>
           <p className="muted" style={{ margin: 0 }}>
-            These analyses use different scoring formulas because semantic scoring is present in only one run.
+            {data.summary.scoring.known
+              ? `These analyses use different scoring configurations (${data.summary.scoring.differences.join(
+                  ", "
+                )}). Score changes may reflect formula differences as well as catalog changes.`
+              : "Scoring metadata is unavailable for one or both legacy analyses, so formula compatibility cannot be verified."}
           </p>
         </div>
       )}
@@ -286,6 +291,11 @@ function ComparePageInner() {
           </div>
         </MetricCard>
       </div>
+
+      <ScoringMetadataPanel
+        base={data.base.scoringMetadata}
+        target={data.target.scoringMetadata}
+      />
 
       <div className="card">
         <h2>Dimension changes</h2>

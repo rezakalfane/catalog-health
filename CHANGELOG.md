@@ -7,6 +7,28 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feat/scoring-version-metadata — 2026-07-14
+
+Versioned scoring metadata, configuration comparison, and report exports.
+Developed on `feat/scoring-version-metadata`, merged into `main` (no-ff);
+merge hash backfilled next entry. HISTORY.md entry 35.
+
+Highlights:
+
+- Added an immutable per-analysis snapshot containing scoring schema, engine,
+  and profile versions; dimension weights; thresholds; semantic weight; prompt
+  version; and the applied semantic provider and model.
+- Persisted snapshots through a SQLite migration and exposed them in analysis
+  and comparison API payloads, including a compatibility result that identifies
+  score-affecting configuration differences.
+- Added compact three-line version context plus a complete metadata table to
+  analysis pages, and a side-by-side comparison table with highlighted changes
+  and legacy-analysis fallbacks.
+- Included complete metadata tables in analysis PDFs and previous/current
+  metadata with changed-row highlighting in comparison PDFs.
+- Added scoring-compatibility tests and expanded both PDF smoke fixtures,
+  including multi-page rendering and visual verification.
+
 ## feat/top-fixes-table-controls — 2026-07-14
 
 Interactive Top Fixes table and export. Developed on

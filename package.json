@@ -9,6 +9,7 @@
     "start": "npm run start --workspace @catalog-health/web",
     "test_pdf_export": "npm run test_pdf_export --workspace @catalog-health/web",
     "test_comparison_pdf_export": "npm run test_comparison_pdf_export --workspace @catalog-health/web",
+    "test_scoring_metadata": "npm run test_scoring_metadata --workspace @catalog-health/web",
     "cli": "node packages/cli/src/index.js"
   },
   "engines": { "node": ">=18.18" }

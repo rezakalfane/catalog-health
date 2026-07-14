@@ -141,6 +141,15 @@ higher limits.
 Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
 `packages/core/src/semantic.js`.
 
+Every new analysis stores a scoring metadata snapshot: engine and profile
+versions, dimension weights, thresholds, semantic weight, prompt version, and
+the provider/model actually used when semantic scores were applied. Analysis
+pages and PDF exports show the complete snapshot as well as a compact header
+summary. Comparisons in both the app and PDF exports display previous and
+current settings side by side, highlight changed values, and warn when formula
+differences—or missing metadata on a legacy run—mean a score delta may not be
+entirely attributable to catalog changes.
+
 ## Issues detected
 
 Every product is flagged with named issues; they drive the "most common

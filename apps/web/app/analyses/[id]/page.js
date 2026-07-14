@@ -9,6 +9,8 @@ import { getEnvironment, listAnalyses, skipSemantic } from "@/lib/api-client";
 import SemanticBadge from "@/components/SemanticBadge";
 import ActionIcon from "@/components/ActionIcon";
 import CompareAnalysisMenu from "@/components/CompareAnalysisMenu";
+import ScoringMetadataLine from "@/components/ScoringMetadataLine";
+import ScoringMetadataPanel from "@/components/ScoringMetadataPanel";
 
 export default function AnalysisPage() {
   const { id } = useParams();
@@ -81,6 +83,9 @@ export default function AnalysisPage() {
                 )}
               </span>
             )}
+            {status === "done" && (
+              <ScoringMetadataLine metadata={analysis?.scoringMetadata} />
+            )}
           </p>
         </div>
         {status === "running" && progress && (
@@ -136,6 +141,10 @@ export default function AnalysisPage() {
       </div>
 
       <AnalysisLiveReport analysisId={id} onAnalysis={setAnalysis} />
+
+      {status === "done" && analysis && (
+        <ScoringMetadataPanel metadata={analysis.scoringMetadata} />
+      )}
     </>
   );
 }
