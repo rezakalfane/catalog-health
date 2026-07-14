@@ -7,6 +7,21 @@ merged. For the prompt-by-prompt evolution of the tool, see
 
 ---
 
+## feature/settings-navigation — 2026-07-14
+
+Grouped configuration navigation. Developed on
+`feature/settings-navigation`, merged into `main` (no-ff). HISTORY.md entry 41.
+
+Highlights:
+
+- Reorganized the sidebar into Dashboard, New analysis, and a Settings group
+  with Environments first and Models second.
+- Preserved the existing `/environments` and `/settings` routes while renaming
+  the model-configuration page heading from Settings to Models.
+- Added semantic navigation labels, responsive nested-link styling, and mobile
+  wrapping for the expanded navigation.
+- Updated model setup and error guidance to direct users to Settings → Models.
+
 ## feature/ai-product-recommendations — 2026-07-14
 
 Catalog-grounded product recommendations in AI Analysis. Developed on

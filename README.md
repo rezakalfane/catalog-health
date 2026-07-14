@@ -55,7 +55,7 @@ npm run dev
 # open http://localhost:3000
 ```
 
-- **Environments** — add / edit / remove BigCommerce stores (name, store
+- **Settings → Environments** — add / edit / remove BigCommerce stores (name, store
   hash, access token, and scoring profile). Tokens are write-only in the UI:
   the API never sends them back to the browser.
 - **New analysis** — pick an environment and run; or run a demo analysis with
@@ -119,7 +119,7 @@ npm run dev
   catalog data through image preparation, generation, validation, and saving.
   The saved review and product PDF retain the configuration name and underlying
   provider/model used, even if that configuration is later edited or removed.
-- **Settings** — add, edit, remove, test, and name multiple Anthropic, OpenAI,
+- **Settings → Models** — add, edit, remove, test, and name multiple Anthropic, OpenAI,
   or local Ollama model configurations and choose one default. The default is
   merely the initial choice: semantic and product AI actions can select another
   ready model for each run. API keys remain encrypted at rest and write-only in

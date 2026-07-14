@@ -827,3 +827,22 @@ cross-sell, substitute, upgrade, and adjacent-use recommendations.
   and sale price, SKU, product ID, and a specific recommendation reason.
 - Saved reviews and comprehensive product PDFs retain the recommendation cards
   and safely retrievable thumbnails.
+
+## 41. Group environments and models under Settings — 2026-07-14
+
+> **Prompt:** Move Environments and model configuration under a Settings item,
+> with Environments first and Models second.
+
+**Summary:** Simplified the primary navigation by turning Settings into a clear
+group for application configuration.
+
+- The sidebar now keeps Dashboard and New analysis as primary actions, followed
+  by a Settings group containing Environments in position 1 and Models in
+  position 2.
+- The existing `/environments` and `/settings` routes remain stable, preserving
+  bookmarks and integrations; the model-configuration page is now titled
+  **Models**.
+- Model-related setup and error guidance consistently points users to
+  **Settings → Models**.
+- Added responsive nested-navigation styling and semantic navigation/group
+  labels for keyboard and assistive-technology users.

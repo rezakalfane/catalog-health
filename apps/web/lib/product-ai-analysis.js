@@ -129,7 +129,7 @@ metadata. Rank actions by commercial value and specificity.`;
 function selectedModel(settings) {
   const provider = settings.provider || "anthropic";
   const modelId = settings.model;
-  if (!modelId) throw new Error("Select an LLM model in Settings before running AI Analysis.");
+  if (!modelId) throw new Error("Select an LLM model in Settings → Models before running AI Analysis.");
 
   if (provider === "ollama") {
     const base = normalizeOllamaBaseUrl(settings.baseUrl);
@@ -143,7 +143,7 @@ function selectedModel(settings) {
   }
 
   const apiKey = settings.apiKey || envKeyFor(provider);
-  if (!apiKey) throw new Error(`Add a ${provider} API key in Settings before running AI Analysis.`);
+  if (!apiKey) throw new Error(`Add a ${provider} API key in Settings → Models before running AI Analysis.`);
   if (provider === "openai") {
     const openai = createOpenAI({ apiKey });
     return { provider, modelId, model: openai.chat(modelId) };
