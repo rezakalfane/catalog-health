@@ -453,6 +453,47 @@ a.progress-link:hover .progress-top { color: var(--signal); }
   height: 0.95rem;
 }
 .analysis-meta-line { display: block; }
+.scoring-meta-part { display: block; }
+
+/* Scoring configuration snapshots ------------------------------------------ */
+.scoring-metadata-card .section-action-head { align-items: flex-start; }
+.scoring-metadata-intro { margin: -0.25rem 0 0; }
+.table-scroll { overflow-x: auto; }
+.scoring-metadata-table { min-width: 520px; }
+.scoring-metadata-table td:not(:first-child) {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.83rem;
+}
+.metadata-group-row th {
+  background: #f7f8fc;
+  color: var(--ink);
+  padding-top: 0.7rem;
+  padding-bottom: 0.45rem;
+}
+.metadata-changed-row td { background: #fff8e8; }
+.metadata-change-label {
+  display: inline-block;
+  margin-left: 0.55rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  background: #f7dfaa;
+  color: #72510a;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.metadata-status {
+  flex: 0 0 auto;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.metadata-status.matching { background: #e4f4e9; color: #24643a; }
+.metadata-status.changed { background: #fff0cf; color: #72510a; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createComparisonReportPdf } from "../lib/report-pdf.js";
+import { createScoringMetadata } from "@catalog-health/core";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const outputDir = path.resolve(scriptDir, "../../../tmp/pdfs");
@@ -43,14 +44,38 @@ const products = Array.from({ length: 18 }, (_, index) => ({
   addedIssues: index % 3 === 0 ? ["missing_search_keywords"] : [],
 }));
 
+const baseScoringMetadata = createScoringMetadata();
+const targetScoringMetadata = createScoringMetadata({
+  semanticRequested: true,
+  semanticApplied: true,
+  semanticJudge: {
+    provider: "openai",
+    model: "gpt-4o-mini",
+    label: "gpt-4o-mini (OpenAI)",
+  },
+});
+
 const comparison = {
-  base: { id: "base-analysis", createdAt: "2026-07-01T08:30:00Z" },
-  target: { id: "target-analysis", createdAt: "2026-07-14T10:45:00Z" },
+  base: {
+    id: "base-analysis",
+    createdAt: "2026-07-01T08:30:00Z",
+    scoringMetadata: baseScoringMetadata,
+  },
+  target: {
+    id: "target-analysis",
+    createdAt: "2026-07-14T10:45:00Z",
+    scoringMetadata: targetScoringMetadata,
+  },
   summary: {
     score: { base: 61.4, target: 78.2, delta: 16.8 },
     grade: { base: "D", target: "B", changed: true },
     products: { base: 120, target: 126, delta: 6 },
     semanticComparable: false,
+    scoring: {
+      known: true,
+      comparable: false,
+      differences: ["semantic scoring inclusion"],
+    },
   },
   dimensions: ["content", "structure", "media", "commerce", "discoverability", "semantic"]
     .map((dimension, index) => ({

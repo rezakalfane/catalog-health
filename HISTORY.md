@@ -667,3 +667,39 @@ inspection, and `npm run build`.
   keep the existing 15-row presentation to avoid overwhelming the dashboard.
 
 Verified with a CSV serializer smoke test and `npm run build`.
+
+## 35. Record and compare scoring versions — 2026-07-14
+
+> **Prompts:** Implement roadmap item "scoring / version metadata." → Display
+> and compare the metadata on analysis and comparison pages. → Split the
+> compact analysis-header metadata into engine, profile, and semantic lines. →
+> Include scoring metadata in analysis and comparison PDF exports. → Great,
+> update docs, branch, commit, and merge to main.
+
+**Summary:** Made every new score reproducible and made formula changes visible
+before users interpret analysis deltas.
+
+- Each analysis now stores a versioned scoring snapshot containing the metadata
+  schema, scoring engine and profile identifiers, dimension weights, thresholds,
+  semantic weight, prompt version, and the semantic provider/model actually
+  applied. Semantic requests that are skipped or fail remain distinguishable
+  from semantic scores that affected the result.
+- SQLite migration 6 persists the snapshot, and analysis API responses retain
+  it. Legacy analyses remain readable with an explicit metadata-unavailable
+  state.
+- Comparisons evaluate formula compatibility and name each score-affecting
+  difference. The report keeps its warning when score deltas may reflect a
+  configuration change as well as catalog changes.
+- Analysis pages show compact engine, profile, and semantic context on separate
+  header lines plus a complete grouped settings table. Comparison pages show
+  previous/current settings side by side, highlight changed rows, and report
+  whether the configurations match.
+- Analysis PDFs include the full configuration snapshot. Comparison PDFs
+  include previous/current metadata, shaded changed rows, and the existing
+  compatibility note; both retain legacy fallbacks.
+- Added `npm run test_scoring_metadata` and expanded both PDF smoke tests with
+  representative scoring snapshots.
+
+Verified with scoring compatibility tests, analysis and comparison PDF smoke
+tests, rendered visual inspection of every generated PDF page,
+`git diff --check`, and `npm run build`.

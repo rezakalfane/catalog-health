@@ -43,6 +43,7 @@ export function compareSummaries(base, target) {
       delta: delta(baseSummary.productCount, targetSummary.productCount),
     },
     semanticComparable: hasSemantic(baseSummary) === hasSemantic(targetSummary),
+    scoring: compareScoringMetadata(base.scoringMetadata, target.scoringMetadata),
   };
 }
 
@@ -156,6 +157,7 @@ export function compareAnalyses({ base, target, baseRows = [], targetRows = [] }
       overall: base.summary?.overall ?? null,
       productCount: base.summary?.productCount ?? 0,
       hasRows: base.hasRows,
+      scoringMetadata: base.scoringMetadata || null,
     },
     target: {
       id: target.id,
@@ -165,6 +167,7 @@ export function compareAnalyses({ base, target, baseRows = [], targetRows = [] }
       overall: target.summary?.overall ?? null,
       productCount: target.summary?.productCount ?? 0,
       hasRows: target.hasRows,
+      scoringMetadata: target.scoringMetadata || null,
     },
     summary: compareSummaries(base, target),
     dimensions: compareDimensions(base.summary, target.summary),
@@ -173,3 +176,4 @@ export function compareAnalyses({ base, target, baseRows = [], targetRows = [] }
     products: base.hasRows && target.hasRows ? compareProducts(baseRows, targetRows) : [],
   };
 }
+import { compareScoringMetadata } from "@catalog-health/core";

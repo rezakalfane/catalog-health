@@ -11,6 +11,8 @@ import { stripHtml } from "./scoring.js";
 
 export const DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8";
 export const DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
+// Bump whenever the judge instructions, criteria, or verdict interpretation changes.
+export const SEMANTIC_PROMPT_VERSION = "1.0.0";
 
 const CHUNK_SIZE = 10;
 const CONCURRENCY = 4;
@@ -362,13 +364,20 @@ function demoJudge() {
 export function createJudge(settings = {}) {
   const provider = settings.provider || "anthropic";
   if (provider === "demo") {
-    return { judgeChunk: demoJudge(), label: "simulated judge (demo)" };
+    return {
+      judgeChunk: demoJudge(),
+      label: "simulated judge (demo)",
+      provider: "demo",
+      model: "simulated-v1",
+    };
   }
   if (provider === "ollama") {
     if (!settings.model) throw new Error("No Ollama model configured");
     return {
       judgeChunk: ollamaJudge(settings),
       label: `${settings.model} (Ollama, local)`,
+      provider: "ollama",
+      model: settings.model,
     };
   }
   if (provider === "openai") {
@@ -378,6 +387,8 @@ export function createJudge(settings = {}) {
     return {
       judgeChunk: openaiJudge({ apiKey, model: settings.model }),
       label: `${settings.model} (OpenAI)`,
+      provider: "openai",
+      model: settings.model,
       concurrency: Math.max(1, OPENAI_CONCURRENCY),
       minDelayMs: Math.max(0, OPENAI_MIN_DELAY_MS),
     };
@@ -385,7 +396,12 @@ export function createJudge(settings = {}) {
   const apiKey = settings.apiKey || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error("No Anthropic API key configured");
   const model = settings.model || DEFAULT_ANTHROPIC_MODEL;
-  return { judgeChunk: anthropicJudge({ apiKey, model }), label: model };
+  return {
+    judgeChunk: anthropicJudge({ apiKey, model }),
+    label: model,
+    provider: "anthropic",
+    model,
+  };
 }
 
 // -- Catalog pass -------------------------------------------------------------

@@ -15,6 +15,7 @@ import {
   createJudge,
   judgeCatalog,
   summarize,
+  createScoringMetadata,
 } from "@catalog-health/core";
 import {
   createAnalysis,
@@ -64,6 +65,7 @@ export function startAnalysisRun({ userId, environment, demo, semantic }) {
     status: "running",
     summary: null,
     progress: { percent: 0, stage: "fetch", label: "Starting…", detail: null },
+    scoringMetadata: createScoringMetadata({ semanticRequested: semantic }),
   });
   activeRuns.add(analysis.id);
   execute(analysis.id, { userId, environment, demo, semantic })
@@ -134,11 +136,18 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
 
   // -- Stage 2b (optional): semantic pass (~64 -> ~78) -------------------------
   let semanticJudge = null; // label of the model that judged, for the report
+  let semanticJudgeMetadata = null;
+  let semanticApplied = false;
   if (semantic) {
     const semStart = Date.now();
     try {
       const judge = createJudge(demo ? { provider: "demo" } : getSettings(userId).llm);
       semanticJudge = judge.label;
+      semanticJudgeMetadata = {
+        provider: judge.provider,
+        model: judge.model,
+        label: judge.label,
+      };
       setProgress(64, "semantic", "Judging descriptions…", judge.label);
       const verdicts = await judgeCatalog(products, {
         judgeChunk: judge.judgeChunk,
@@ -155,6 +164,7 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
       });
       if (demo) await sleep(600);
       rows = applySemanticVerdicts(rows, verdicts);
+      semanticApplied = true;
     } catch (err) {
       // Degrade to the 5-dimension report rather than failing the run.
       updateAnalysis(analysisId, {
@@ -215,6 +225,11 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
     error: null,
     durationMs: Date.now() - startedAt,
     semanticMs,
+    scoringMetadata: createScoringMetadata({
+      semanticRequested: semantic,
+      semanticApplied,
+      semanticJudge: semanticJudgeMetadata,
+    }),
     progress: { percent: 100, stage: "done", label: "Analysis complete", detail: null },
   });
 }
