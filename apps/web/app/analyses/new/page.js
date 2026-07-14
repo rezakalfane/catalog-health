@@ -128,7 +128,7 @@ function NewAnalysisForm() {
             ) : (
               <p className="muted">
                 Semantic scoring (LLM judges description quality) is available
-                once a model is connected under <a href="/settings">Settings</a>.
+                once a model is connected under <a href="/settings">Settings → Models</a>.
               </p>
             )}
             <button onClick={() => run(false)} disabled={running || !selected}>

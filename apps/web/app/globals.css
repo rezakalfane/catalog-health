@@ -87,6 +87,29 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   font-size: 0.92rem;
 }
 .sidebar a:hover { background: rgba(255, 255, 255, 0.08); text-decoration: none; color: #fff; }
+.sidebar-section { margin-top: 0.35rem; }
+.sidebar-section-title {
+  display: block;
+  padding: 0.45rem 0.6rem 0.3rem;
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.sidebar-subnav { display: flex; flex-direction: column; gap: 0.15rem; padding-left: 0.45rem; }
+.sidebar-subnav a { position: relative; padding-left: 0.85rem; }
+.sidebar-subnav a::before {
+  content: "";
+  position: absolute;
+  left: 0.25rem;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #7180a8;
+  transform: translateY(-50%);
+}
 
 .main { flex: 1; padding: 2rem 2.5rem; max-width: 1100px; }
 
@@ -98,8 +121,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 @media (max-width: 720px) {
   .shell { flex-direction: column; }
-  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 0.75rem 1rem; position: static; height: auto; overflow: visible; }
+  .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; padding: 0.75rem 1rem; position: static; height: auto; overflow: visible; }
   .sidebar .brand { margin: 0 1rem 0 0; }
+  .sidebar-section { display: flex; align-items: center; gap: 0.15rem; margin: 0; }
+  .sidebar-section-title { padding: 0.45rem 0.35rem 0.45rem 0.6rem; }
+  .sidebar-subnav { flex-direction: row; padding-left: 0; }
+  .sidebar-subnav a { padding-left: 0.6rem; }
+  .sidebar-subnav a::before { display: none; }
   .main { padding: 1.25rem; }
 }
 

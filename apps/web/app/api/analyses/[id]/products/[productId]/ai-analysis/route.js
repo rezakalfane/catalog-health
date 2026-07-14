@@ -254,7 +254,7 @@ export async function POST(request, { params }) {
   const readiness = redactLlmModel(settings);
   if (!readiness?.configured) {
     return NextResponse.json(
-      { error: "Configure and select an LLM model in Settings before running AI Analysis." },
+      { error: "Configure and select an LLM model in Settings → Models before running AI Analysis." },
       { status: 409 }
     );
   }

@@ -122,7 +122,7 @@ export default function SettingsPage() {
   const editing = models.find((configuration) => configuration.id === editingId);
   return (
     <>
-      <div className="page-head"><h1>Settings</h1></div>
+      <div className="page-head"><h1>Models</h1></div>
 
       <div className="card">
         <h2>{editingId ? "Edit model configuration" : "Add model configuration"}</h2>

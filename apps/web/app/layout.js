@@ -25,14 +25,19 @@ export default async function RootLayout({ children }) {
       </head>
       <body>
         <div className="shell">
-          <nav className="sidebar">
+          <nav className="sidebar" aria-label="Primary navigation">
             <div className="brand">
               Catalog<span>Health</span>
             </div>
             <Link href="/">Dashboard</Link>
-            <Link href="/environments">Environments</Link>
             <Link href="/analyses/new">New analysis</Link>
-            <Link href="/settings">Settings</Link>
+            <div className="sidebar-section" role="group" aria-labelledby="sidebar-settings-label">
+              <span className="sidebar-section-title" id="sidebar-settings-label">Settings</span>
+              <div className="sidebar-subnav">
+                <Link href="/environments">Environments</Link>
+                <Link href="/settings">Models</Link>
+              </div>
+            </div>
             <div style={{ marginTop: "auto" }}>
               <UserMenu email={session?.user?.email} />
             </div>
