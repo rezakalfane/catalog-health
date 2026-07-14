@@ -860,6 +860,43 @@ function drawAiImageCard(doc, renderer, image, imageBuffer) {
   doc.y = y + height + 8;
 }
 
+function drawAiProductRecommendation(doc, renderer, recommendation, imageBuffer) {
+  const categories = (recommendation.categoryNames || []).join(" / ") || "Uncategorized";
+  const hasSalePrice = Number(recommendation.salePrice) > 0;
+  const price = Number(recommendation.price) > 0 ? `$${recommendation.price}` : "Price unavailable";
+  const commercial = `${hasSalePrice ? `${price} -> $${recommendation.salePrice}` : price} | SKU ${recommendation.sku || "-"} | Product ${recommendation.productId}`;
+  const textXOffset = imageBuffer ? 102 : 10;
+  const textWidth = CONTENT_WIDTH - textXOffset - 10;
+  doc.font("Helvetica-Bold").fontSize(9);
+  const titleHeight = doc.heightOfString(clean(recommendation.title || `Product ${recommendation.productId}`), { width: textWidth });
+  doc.font("Helvetica").fontSize(7.5);
+  const metaHeight = doc.heightOfString(clean(`${categories}\n${commercial}`), { width: textWidth, lineGap: 1 });
+  doc.font("Helvetica").fontSize(8);
+  const reasonHeight = doc.heightOfString(clean(recommendation.reason || ""), { width: textWidth, lineGap: 2 });
+  const height = Math.max(imageBuffer ? 98 : 68, titleHeight + metaHeight + reasonHeight + 34);
+  renderer.ensureSpace(height + 8);
+  const y = doc.y;
+  doc.roundedRect(PAGE.margin, y, CONTENT_WIDTH, height, 4).fillAndStroke(COLORS.white, COLORS.line);
+  let textX = PAGE.margin + 10;
+  if (imageBuffer) {
+    try {
+      doc.image(imageBuffer, PAGE.margin + 9, y + 9, { fit: [80, 80], align: "center", valign: "center" });
+      textX = PAGE.margin + 102;
+    } catch {
+      textX = PAGE.margin + 10;
+    }
+  }
+  const width = PAGE.margin + CONTENT_WIDTH - textX - 10;
+  doc.font("Helvetica-Bold").fontSize(9).fillColor(COLORS.ink)
+    .text(clean(recommendation.title || `Product ${recommendation.productId}`), textX, y + 10, { width });
+  doc.font("Helvetica").fontSize(7.5).fillColor(COLORS.soft)
+    .text(clean(categories), textX, doc.y + 3, { width })
+    .text(clean(commercial), textX, doc.y + 2, { width });
+  doc.font("Helvetica").fontSize(8).fillColor(COLORS.ink)
+    .text(clean(recommendation.reason || ""), textX, doc.y + 6, { width, lineGap: 2 });
+  doc.y = y + height + 8;
+}
+
 /** Build a comprehensive single-product report, including a saved AI review. */
 export async function createProductReportPdf({
   analysis,
@@ -871,6 +908,7 @@ export async function createProductReportPdf({
   const imageUrls = [
     product.details?.thumbnailUrl,
     ...(aiReview?.result?.imageReview?.images || []).map((image) => image.thumbnailUrl),
+    ...(aiReview?.result?.productRecommendations || []).map((item) => item.thumbnailUrl),
   ].filter(Boolean);
   const loaded = await Promise.all([...new Set(imageUrls)].map(async (url) => [url, await loadPdfImage(url)]));
   const imageBuffers = new Map(loaded.filter(([, bytes]) => bytes));
@@ -1098,6 +1136,15 @@ export async function createProductReportPdf({
     renderer.bullets(ai.placement?.merchandisingCollections || []);
     renderer.paragraph("Cross-sell ideas", { bold: true, gap: 3 });
     renderer.bullets(ai.placement?.crossSellIdeas || []);
+
+    renderer.sectionTitle("Product recommendations", "Catalog-grounded complementary, substitute, and adjacent products.");
+    if ((ai.productRecommendations || []).length) {
+      for (const recommendation of ai.productRecommendations) {
+        drawAiProductRecommendation(doc, renderer, recommendation, imageBuffers.get(recommendation.thumbnailUrl));
+      }
+    } else {
+      renderer.paragraph("No sufficiently relevant catalog products were identified.");
+    }
 
     renderer.sectionTitle("Feed, SEO and discovery");
     renderer.table({
