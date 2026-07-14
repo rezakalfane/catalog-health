@@ -52,7 +52,7 @@ function payloadFromForm(form) {
   };
 }
 
-function ProfileEditor({ profile, form, setForm, busy, error, onSubmit, onCancel }) {
+function ProfileEditor({ profile, form, setForm, busy, error, onSubmit, onCopy, onCancel }) {
   const readOnly = Boolean(profile?.builtIn);
   const total = Object.values(form.dimensionWeights).reduce((sum, value) => sum + Number(value || 0), 0);
   const validTotal = Math.abs(total - 100) < 0.001;
@@ -128,6 +128,7 @@ function ProfileEditor({ profile, form, setForm, busy, error, onSubmit, onCancel
         {error && <p className="error">{error}</p>}
         <div className="form-actions">
           {!readOnly && <button type="submit" disabled={busy || !validTotal}>{busy ? "Saving…" : profile ? "Save changes" : "Add profile"}</button>}
+          {profile && <button type="button" className="secondary" disabled={busy} onClick={onCopy}>Copy profile</button>}
           <button type="button" className="secondary" onClick={onCancel}>{readOnly ? "Close" : "Cancel"}</button>
         </div>
       </form>
@@ -187,6 +188,17 @@ export default function ProfilesPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function copyProfile(profile) {
+    const suffix = " copy";
+    setEditing(null);
+    setForm({
+      ...formFromProfile(profile),
+      label: `${profile.label.slice(0, 80 - suffix.length)}${suffix}`,
+    });
+    setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   async function submit(event) {
     event.preventDefault();
     setBusy(true);
@@ -230,7 +242,18 @@ export default function ProfilesPage() {
 
       {error && editing === undefined && <p className="error">{error}</p>}
 
-      {editing !== undefined && <ProfileEditor profile={editing} form={form} setForm={setForm} busy={busy} error={error} onSubmit={submit} onCancel={() => { setEditing(undefined); setError(""); }} />}
+      {editing !== undefined && (
+        <ProfileEditor
+          profile={editing}
+          form={form}
+          setForm={setForm}
+          busy={busy}
+          error={error}
+          onSubmit={submit}
+          onCopy={editing ? () => copyProfile(editing) : undefined}
+          onCancel={() => { setEditing(undefined); setError(""); }}
+        />
+      )}
 
       <section className="card">
         <h2>Built-in profiles</h2>

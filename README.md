@@ -126,12 +126,13 @@ npm run dev
   the UI (`ANTHROPIC_API_KEY` / `OPENAI_API_KEY` environment fallbacks remain
   supported). Existing single-model settings are imported automatically.
 - **Settings → Profiles** — inspect the four protected built-in scoring
-  profiles or add, edit, and remove account-specific profiles with custom
-  dimension weights, semantic weight, and catalog thresholds. Custom profiles
-  are available to environments, new analyses, and stored-fact recalculations.
-  Each edit creates a new profile revision for comparison metadata; deleting a
-  profile reassigns its environments to Balanced while completed analyses keep
-  their immutable profile snapshot.
+  profiles or add, edit, copy, and remove account-specific profiles with custom
+  dimension weights, semantic weight, and catalog thresholds. Built-in and
+  custom profiles can both be copied into a new editable custom profile. Custom
+  profiles are available to environments, new analyses, and stored-fact
+  recalculations. Each edit creates a new profile revision for comparison
+  metadata; deleting a profile reassigns its environments to Balanced while
+  completed analyses keep their immutable profile snapshot.
 
 Model and scoring-profile persistence have dedicated integration tests:
 
