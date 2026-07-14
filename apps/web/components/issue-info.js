@@ -14,7 +14,7 @@ export const ISSUE_INFO = {
   thin_description: {
     label: "Thin description",
     dimension: "content",
-    fix: "Under ~200 characters. Expand with what it is, who it's for, and materials/specs.",
+    fix: "Shorter than the selected scoring profile's minimum. Expand with what it is, who it's for, and materials/specs.",
   },
   no_images: {
     label: "No images",
@@ -22,9 +22,9 @@ export const ISSUE_INFO = {
     fix: "Add product photos — listings without images barely convert and are excluded from most feeds.",
   },
   single_image: {
-    label: "Only one image",
+    label: "Not enough images",
     dimension: "content",
-    fix: "Add at least a second angle or in-context shot.",
+    fix: "Add more angles or in-context shots to meet the selected scoring profile's image target.",
   },
   missing_alt_text: {
     label: "Missing image alt text",
@@ -83,7 +83,7 @@ export const ISSUE_INFO = {
   over_categorized: {
     label: "In too many categories",
     dimension: "taxonomy",
-    fix: "More than 5 categories within a single channel tree dilutes relevance. Keep the few that genuinely apply per channel (assignments across different channels don't count against this).",
+    fix: "This exceeds the selected profile's category limit within one channel tree. Keep the few categories that genuinely apply per channel.",
   },
 
   // hygiene

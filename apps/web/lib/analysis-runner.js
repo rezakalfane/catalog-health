@@ -16,6 +16,7 @@ import {
   judgeCatalog,
   summarize,
   createScoringMetadata,
+  getScoringProfile,
 } from "@catalog-health/core";
 import {
   createAnalysis,
@@ -59,16 +60,20 @@ export function reconcileInterruptedAnalyses() {
  * Returns immediately with the (running) record.
  */
 export function startAnalysisRun({ userId, environment, demo, semantic }) {
+  const scoringProfile = getScoringProfile(environment?.scoringProfileId);
   const analysis = createAnalysis({
     userId,
     environmentId: environment ? environment.id : "demo",
     status: "running",
     summary: null,
     progress: { percent: 0, stage: "fetch", label: "Starting…", detail: null },
-    scoringMetadata: createScoringMetadata({ semanticRequested: semantic }),
+    scoringMetadata: createScoringMetadata({
+      semanticRequested: semantic,
+      profile: scoringProfile,
+    }),
   });
   activeRuns.add(analysis.id);
-  execute(analysis.id, { userId, environment, demo, semantic })
+  execute(analysis.id, { userId, environment, demo, semantic, scoringProfile })
     .catch((err) => {
       updateAnalysis(analysis.id, {
         status: "failed",
@@ -83,7 +88,13 @@ export function startAnalysisRun({ userId, environment, demo, semantic }) {
   return analysis;
 }
 
-async function execute(analysisId, { userId, environment, demo, semantic }) {
+async function execute(analysisId, {
+  userId,
+  environment,
+  demo,
+  semantic,
+  scoringProfile,
+}) {
   const startedAt = Date.now();
   let semanticMs = null;
   const setProgress = (percent, stage, label, detail = null, extra = {}) =>
@@ -132,7 +143,7 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
   await sleep(demo ? 600 : 0);
   // Let the progress write land before the sync scoring pass blocks the loop.
   await new Promise((r) => setImmediate(r));
-  let rows = analyzeCatalog(products, categories);
+  let rows = analyzeCatalog(products, categories, scoringProfile);
 
   // -- Stage 2b (optional): semantic pass (~64 -> ~78) -------------------------
   let semanticJudge = null; // label of the model that judged, for the report
@@ -163,7 +174,7 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
           ),
       });
       if (demo) await sleep(600);
-      rows = applySemanticVerdicts(rows, verdicts);
+      rows = applySemanticVerdicts(rows, verdicts, scoringProfile);
       semanticApplied = true;
     } catch (err) {
       // Degrade to the 5-dimension report rather than failing the run.
@@ -229,6 +240,7 @@ async function execute(analysisId, { userId, environment, demo, semantic }) {
       semanticRequested: semantic,
       semanticApplied,
       semanticJudge: semanticJudgeMetadata,
+      profile: scoringProfile,
     }),
     progress: { percent: 100, stage: "done", label: "Analysis complete", detail: null },
   });

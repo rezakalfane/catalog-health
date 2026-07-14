@@ -119,6 +119,12 @@ const MIGRATIONS = [
   `
   ALTER TABLE analyses ADD COLUMN scoring_metadata TEXT; -- JSON
   `,
+
+  // 7 — each environment selects one of the static scoring profiles. Existing
+  // stores retain the original balanced formula.
+  `
+  ALTER TABLE environments ADD COLUMN scoring_profile_id TEXT NOT NULL DEFAULT 'catalog-health-default';
+  `,
 ];
 
 function migrate(db) {

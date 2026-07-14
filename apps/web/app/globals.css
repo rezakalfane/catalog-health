@@ -455,6 +455,36 @@ a.progress-link:hover .progress-top { color: var(--signal); }
 .analysis-meta-line { display: block; }
 .scoring-meta-part { display: block; }
 
+/* Environment scoring profiles -------------------------------------------- */
+.profile-subtitle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.38rem;
+  margin: 0.2rem 0 0;
+  color: var(--signal);
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.profile-subtitle-mark {
+  width: 0.45rem;
+  height: 0.45rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.profile-subtitle-description {
+  color: var(--ink-soft);
+  font-weight: 400;
+}
+.profile-select-field { margin-top: 0.1rem; }
+.profile-select-description {
+  margin: -0.45rem 0 1rem;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 /* Scoring configuration snapshots ------------------------------------------ */
 .scoring-metadata-card .section-action-head { align-items: flex-start; }
 .scoring-metadata-intro { margin: -0.25rem 0 0; }

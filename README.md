@@ -56,8 +56,8 @@ npm run dev
 ```
 
 - **Environments** — add / edit / remove BigCommerce stores (name, store
-  hash, access token). Tokens are write-only in the UI: the API never sends
-  them back to the browser.
+  hash, access token, and scoring profile). Tokens are write-only in the UI:
+  the API never sends them back to the browser.
 - **New analysis** — pick an environment and run; or run a demo analysis with
   no credentials to see the dashboards populated. Analyses run asynchronously:
   you land on a live analysis page (progress bar + sections filling in as the
@@ -67,6 +67,7 @@ npm run dev
   impact-weighted top-fix list. Top fixes support product/SKU search, grade
   filtering, sortable columns, and filtered/sorted CSV export; analysis pages
   show up to 100 matches while environment overviews remain capped at 15.
+  Environment analysis history includes the profile captured by each run.
 - **Analysis comparison** — from a completed analysis, choose any of the ten
   immediately preceding runs from the same environment. The picker shows each
   run's date, product count, score, grade, duration, and semantic-scoring tag.
@@ -109,7 +110,27 @@ npm run test_comparison_pdf_export
 It generates and validates a multi-page comparison report at
 `tmp/pdfs/catalog-health-comparison-test.pdf`.
 
-## The five scoring dimensions
+## Scoring profiles
+
+Each environment selects a static scoring profile when it is created or
+edited. The profile changes both dimension weights and rule thresholds; every
+analysis snapshots the exact configuration it used, so later profile changes
+do not rewrite history. The selected profile appears below environment names
+across the dashboard and analysis views, and each row in an environment's
+Analysis history table shows the profile used for that specific run.
+
+| Profile | Emphasis |
+|---|---|
+| Balanced | Even coverage across content, structure, taxonomy, commerce hygiene, and feeds; this is the default for existing environments and demo runs. |
+| Content Quality | Richer descriptions, stronger titles, and deeper image coverage. |
+| Marketplace Readiness | Complete attributes and dependable feed data for external channels. |
+| Catalog Governance | Consistent attributes and disciplined taxonomy. |
+
+The current static definitions live in `packages/core/src/profiles.js`. Their
+shape is designed to support future user-created profiles, custom weights, and
+per-rule enable/disable controls without changing stored analysis snapshots.
+
+### Balanced profile dimensions
 
 | Dimension | Weight | What it checks |
 |---|---|---|
@@ -138,7 +159,8 @@ requests, and still retries transient 429 rate-limit responses. Override with
 `OPENAI_JUDGE_CONCURRENCY` and `OPENAI_JUDGE_MIN_DELAY_MS` if your account has
 higher limits.
 
-Weights and thresholds live in `packages/core/src/scoring.js`; the judge in
+Profile weights and thresholds live in `packages/core/src/profiles.js`; the
+scoring engine is in `packages/core/src/scoring.js` and the judge in
 `packages/core/src/semantic.js`.
 
 Every new analysis stores a scoring metadata snapshot: engine and profile
@@ -159,9 +181,9 @@ The full set, by dimension:
 | Dimension | Issue | What it flags |
 |---|---|---|
 | content | Missing description | No description at all. |
-| content | Thin description | Description under ~200 characters. |
+| content | Thin description | Description below the selected profile's minimum length. |
 | content | No images | The product has no images. |
-| content | Only one image | Fewer than 2 images. |
+| content | Not enough images | Image count below the selected profile's target. |
 | content | Missing image alt text | Fewer than half the images have alt text. |
 | content | Weak title | Title too short, too long, or SKU-like (not human-readable). |
 | content | ALL-CAPS title | Title is written in all capitals. |
@@ -172,7 +194,7 @@ The full set, by dimension:
 | structure | Incomplete variant options | Some variants are missing option values. |
 | taxonomy | Not in any category | The product is orphaned — assigned to no category. |
 | taxonomy | Assigned to a missing category | References a category id that no longer exists. |
-| taxonomy | In too many categories | More than 5 categories **within a single channel tree**. |
+| taxonomy | In too many categories | Exceeds the selected profile's limit **within a single channel tree**. |
 | hygiene | Zero price | Price is 0. |
 | hygiene | Sale price ≥ regular price | The "sale" price isn't actually lower. |
 | hygiene | Missing weight | No shipping weight set. |
@@ -238,6 +260,12 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
 - [x] CSV export from the web app (filtered/sorted product list)
 - [x] PDF export from the web app
 - [x] Compare two analyses (what improved / regressed)
+- [x] Static scoring profiles with per-environment selection, profile-aware
+      thresholds and weights, immutable analysis metadata, and PDF/comparison
+      visibility
+- [ ] Recalculate an existing analysis with another profile using its stored
+      scoring facts, preserve the original analysis, and link the derived run
+      back to its source for one-click comparison
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)
 - [x] Auth (Google SSO + dev login) and per-user multi-tenancy

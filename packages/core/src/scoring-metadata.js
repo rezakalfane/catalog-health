@@ -1,4 +1,4 @@
-import { DIMENSION_WEIGHTS, SEMANTIC_WEIGHT, THRESHOLDS } from "./scoring.js";
+import { getScoringProfile } from "./profiles.js";
 import { SEMANTIC_PROMPT_VERSION } from "./semantic.js";
 
 // These versions describe scoring behavior, independently of the app package version.
@@ -6,24 +6,25 @@ import { SEMANTIC_PROMPT_VERSION } from "./semantic.js";
 // to the default weights or thresholds.
 export const SCORING_METADATA_SCHEMA_VERSION = 1;
 export const SCORING_ENGINE_VERSION = "1.0.0";
-export const DEFAULT_SCORING_PROFILE_ID = "catalog-health-default";
-export const DEFAULT_SCORING_PROFILE_VERSION = "1.0.0";
 
 /** Create an immutable snapshot of every setting that can affect analysis scores. */
 export function createScoringMetadata({
   semanticRequested = false,
   semanticApplied = false,
   semanticJudge = null,
+  profile: profileOrId,
 } = {}) {
+  const profile = getScoringProfile(profileOrId);
   return {
     schemaVersion: SCORING_METADATA_SCHEMA_VERSION,
     engineVersion: SCORING_ENGINE_VERSION,
     profile: {
-      id: DEFAULT_SCORING_PROFILE_ID,
-      version: DEFAULT_SCORING_PROFILE_VERSION,
-      dimensionWeights: { ...DIMENSION_WEIGHTS },
-      thresholds: { ...THRESHOLDS },
-      semanticWeight: SEMANTIC_WEIGHT,
+      id: profile.id,
+      label: profile.label,
+      version: profile.version,
+      dimensionWeights: { ...profile.dimensionWeights },
+      thresholds: { ...profile.thresholds },
+      semanticWeight: profile.semanticWeight,
     },
     semantic: {
       requested: Boolean(semanticRequested),

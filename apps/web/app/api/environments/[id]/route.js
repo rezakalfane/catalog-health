@@ -6,6 +6,7 @@ import {
   redactEnvironment,
 } from "@/lib/db";
 import { getApiUser } from "@/lib/auth-helpers";
+import { isScoringProfileId } from "@catalog-health/core/profiles";
 
 export async function GET(request, { params }) {
   const user = await getApiUser();
@@ -21,6 +22,9 @@ export async function PUT(request, { params }) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await params;
   const patch = await request.json();
+  if (patch.scoringProfileId !== undefined && !isScoringProfileId(patch.scoringProfileId)) {
+    return NextResponse.json({ error: "Unknown scoring profile" }, { status: 400 });
+  }
   const env = updateEnvironment(user.id, id, patch);
   if (!env) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(redactEnvironment(env));

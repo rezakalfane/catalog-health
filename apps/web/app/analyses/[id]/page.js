@@ -11,12 +11,15 @@ import ActionIcon from "@/components/ActionIcon";
 import CompareAnalysisMenu from "@/components/CompareAnalysisMenu";
 import ScoringMetadataLine from "@/components/ScoringMetadataLine";
 import ScoringMetadataPanel from "@/components/ScoringMetadataPanel";
+import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
+import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
 
 export default function AnalysisPage() {
   const { id } = useParams();
   // Fed by AnalysisLiveReport's polling — this page only renders the header.
   const [analysis, setAnalysis] = useState(null);
   const [envName, setEnvName] = useState("");
+  const [envProfileId, setEnvProfileId] = useState("");
   const [comparisonAnalyses, setComparisonAnalyses] = useState([]);
   const [cancellingSemantic, setCancellingSemantic] = useState(false);
 
@@ -32,14 +35,20 @@ export default function AnalysisPage() {
   const progress = analysis?.progress;
   const isDemo = environmentId === "demo";
   const envHref = isDemo ? "/" : `/environments/${environmentId}`;
+  const analysisProfileId = analysis?.scoringMetadata?.profile?.id || envProfileId;
 
   useEffect(() => {
     if (!environmentId) return;
     if (environmentId === "demo") {
       setEnvName("Demo catalog");
+      setEnvProfileId(DEFAULT_SCORING_PROFILE_ID);
       return;
     }
-    getEnvironment(environmentId).then((env) => env && setEnvName(env.name));
+    getEnvironment(environmentId).then((env) => {
+      if (!env) return;
+      setEnvName(env.name);
+      setEnvProfileId(env.scoringProfileId || DEFAULT_SCORING_PROFILE_ID);
+    });
   }, [environmentId]);
 
   useEffect(() => {
@@ -75,6 +84,9 @@ export default function AnalysisPage() {
               {envName || "…"}
               {analysis && <> · started {new Date(analysis.createdAt).toLocaleString()}</>}
             </span>
+            {analysisProfileId && (
+              <ScoringProfileSubtitle as="span" profileId={analysisProfileId} />
+            )}
             {status === "done" && analysis?.durationMs != null && (
               <span className="analysis-meta-line">
                 completed in {formatDuration(analysis.durationMs)}

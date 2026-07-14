@@ -2,29 +2,7 @@
  * Catalog health scoring engine.
  * Five dimensions: content, structure, taxonomy, hygiene, feed.
  */
-
-export const DIMENSION_WEIGHTS = {
-  content: 0.25,
-  structure: 0.25,
-  taxonomy: 0.15,
-  hygiene: 0.2,
-  feed: 0.15,
-};
-
-/**
- * When the semantic pass runs, it takes this share of the overall score and
- * the five heuristic dimensions scale down proportionally to make room.
- */
-export const SEMANTIC_WEIGHT = 0.15;
-
-export const THRESHOLDS = {
-  minDescriptionChars: 200,
-  goodDescriptionChars: 500,
-  minImages: 2,
-  maxSaneCategories: 5,
-  titleMin: 10,
-  titleMax: 150,
-};
+import { getScoringProfile } from "./profiles.js";
 
 const SKU_LIKE_TITLE = /^[A-Z0-9\-_]{4,}$/;
 
@@ -51,19 +29,19 @@ function median(values) {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
-function scoreContent(p, issues) {
+function scoreContent(p, issues, thresholds) {
   let pts = 0;
   const desc = stripHtml(p.description);
   if (desc.length === 0) issues.push("missing_description");
-  else if (desc.length < THRESHOLDS.minDescriptionChars) {
+  else if (desc.length < thresholds.minDescriptionChars) {
     issues.push("thin_description");
     pts += 15;
-  } else if (desc.length < THRESHOLDS.goodDescriptionChars) pts += 28;
+  } else if (desc.length < thresholds.goodDescriptionChars) pts += 28;
   else pts += 35;
 
   const images = p.images || [];
   if (images.length === 0) issues.push("no_images");
-  else if (images.length < THRESHOLDS.minImages) {
+  else if (images.length < thresholds.minImages) {
     issues.push("single_image");
     pts += 12;
   } else pts += 25;
@@ -77,8 +55,8 @@ function scoreContent(p, issues) {
 
   const name = (p.name || "").trim();
   if (
-    name.length >= THRESHOLDS.titleMin &&
-    name.length <= THRESHOLDS.titleMax &&
+    name.length >= thresholds.titleMin &&
+    name.length <= thresholds.titleMax &&
     !SKU_LIKE_TITLE.test(name)
   ) {
     pts += 15;
@@ -124,7 +102,7 @@ function scoreStructure(p, peerMedianCf, issues) {
   return Math.min(pts, 100);
 }
 
-function scoreTaxonomy(p, validCategoryIds, treeByCat, issues) {
+function scoreTaxonomy(p, validCategoryIds, treeByCat, issues, thresholds) {
   const cats = p.categories || [];
   if (!cats.length) {
     issues.push("orphaned_no_category");
@@ -144,7 +122,7 @@ function scoreTaxonomy(p, validCategoryIds, treeByCat, issues) {
     const tree = treeByCat.get(c) ?? "default";
     perTree.set(tree, (perTree.get(tree) || 0) + 1);
   }
-  if (Math.max(...perTree.values()) > THRESHOLDS.maxSaneCategories) {
+  if (Math.max(...perTree.values()) > thresholds.maxSaneCategories) {
     issues.push("over_categorized");
   } else pts += 15;
   return Math.min(pts, 100);
@@ -192,7 +170,8 @@ function scoreFeed(p, issues) {
  * issues. Rows without a verdict (no description, or a failed chunk with a
  * missing description signal) score 0 on the dimension.
  */
-export function applySemanticVerdicts(rows, verdictsById) {
+export function applySemanticVerdicts(rows, verdictsById, profileOrId) {
+  const profile = getScoringProfile(profileOrId);
   const pts = { yes: 1, partial: 0.5, no: 0 };
   const NO_DESCRIPTION = "Not evaluated — no description was available to judge.";
   const NO_RESULT =
@@ -236,10 +215,10 @@ export function applySemanticVerdicts(rows, verdictsById) {
     }
     const scores = { ...row.scores, semantic };
     const overall = Math.round(
-      Object.entries(DIMENSION_WEIGHTS).reduce(
-        (acc, [d, w]) => acc + scores[d] * w * (1 - SEMANTIC_WEIGHT),
+      Object.entries(profile.dimensionWeights).reduce(
+        (acc, [d, w]) => acc + scores[d] * w * (1 - profile.semanticWeight),
         0
-      ) + semantic * SEMANTIC_WEIGHT
+      ) + semantic * profile.semanticWeight
     );
     const impact =
       Math.round((100 - overall) * Math.log1p(row.viewCount + 5 * row.totalSold) * 10) / 10;
@@ -250,7 +229,9 @@ export function applySemanticVerdicts(rows, verdictsById) {
 /**
  * Analyze a catalog. Returns per-product rows with scores, issues, impact.
  */
-export function analyzeCatalog(products, categories) {
+export function analyzeCatalog(products, categories, profileOrId) {
+  const profile = getScoringProfile(profileOrId);
+  const thresholds = profile.thresholds;
   const validCategoryIds = new Set(
     categories.map((c) => c.category_id ?? c.id)
   );
@@ -310,14 +291,14 @@ export function analyzeCatalog(products, categories) {
     };
 
     const scores = {
-      content: scoreContent(p, issues),
+      content: scoreContent(p, issues, thresholds),
       structure: scoreStructure(p, peer, issues),
-      taxonomy: scoreTaxonomy(p, validCategoryIds, treeByCat, issues),
+      taxonomy: scoreTaxonomy(p, validCategoryIds, treeByCat, issues, thresholds),
       hygiene: scoreHygiene(p, issues),
       feed: scoreFeed(p, issues),
     };
     const overall = Math.round(
-      Object.entries(DIMENSION_WEIGHTS).reduce(
+      Object.entries(profile.dimensionWeights).reduce(
         (acc, [d, w]) => acc + scores[d] * w,
         0
       )

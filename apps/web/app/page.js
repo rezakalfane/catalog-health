@@ -6,6 +6,7 @@ import Sparkline from "@/components/Sparkline";
 import { formatDuration } from "@/lib/format";
 import SemanticBadge from "@/components/SemanticBadge";
 import ActionIcon from "@/components/ActionIcon";
+import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,7 @@ export default async function Dashboard() {
                   <h2>
                     <Link href={`/environments/${env.id}`}>{env.name}</Link>
                   </h2>
+                  <ScoringProfileSubtitle profileId={env.scoringProfileId} />
                   <p className="muted">
                     {env.storeHash} ·{" "}
                     {latest
@@ -102,7 +104,10 @@ export default async function Dashboard() {
                     </td>
                     <td>
                       {env ? (
-                        <Link href={`/environments/${env.id}`}>{env.name}</Link>
+                        <>
+                          <Link href={`/environments/${env.id}`}>{env.name}</Link>
+                          <ScoringProfileSubtitle profileId={env.scoringProfileId} />
+                        </>
                       ) : (
                         a.environmentId
                       )}

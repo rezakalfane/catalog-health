@@ -18,6 +18,8 @@ import { sectionInfo } from "@/components/section-info";
 import { formatDuration } from "@/lib/format";
 import SemanticBadge from "@/components/SemanticBadge";
 import TopFixesTable from "@/components/TopFixesTable";
+import ScoringProfileSubtitle from "@/components/ScoringProfileSubtitle";
+import { DEFAULT_SCORING_PROFILE_ID } from "@catalog-health/core/profiles";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,7 @@ export default async function EnvironmentDetail({ params }) {
       <div className="page-head">
         <div>
           <h1>{env.name}</h1>
+          <ScoringProfileSubtitle profileId={env.scoringProfileId} description />
           <p className="muted">Store hash: {env.storeHash}</p>
         </div>
         <RunAnalysisAction environmentId={env.id} />
@@ -179,6 +182,7 @@ export default async function EnvironmentDetail({ params }) {
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Profile</th>
                 <th>Products</th>
                 <th>Score</th>
                 <th>Grade</th>
@@ -194,6 +198,14 @@ export default async function EnvironmentDetail({ params }) {
                     </Link>{" "}
                     <span className="muted">· in progress</span>
                   </td>
+                  <td>
+                    <ScoringProfileSubtitle
+                      profileId={
+                        runningAnalysis.scoringMetadata?.profile?.id ||
+                        DEFAULT_SCORING_PROFILE_ID
+                      }
+                    />
+                  </td>
                   <td className="muted">—</td>
                   <td className="muted">—</td>
                   <td className="muted">—</td>
@@ -207,6 +219,13 @@ export default async function EnvironmentDetail({ params }) {
                       {new Date(a.createdAt).toLocaleString()}
                     </Link>
                     <SemanticBadge analysis={a} />
+                  </td>
+                  <td>
+                    <ScoringProfileSubtitle
+                      profileId={
+                        a.scoringMetadata?.profile?.id || DEFAULT_SCORING_PROFILE_ID
+                      }
+                    />
                   </td>
                   <td>{a.summary.productCount}</td>
                   <td>{a.summary.overall}</td>

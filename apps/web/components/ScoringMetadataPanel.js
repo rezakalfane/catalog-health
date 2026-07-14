@@ -23,6 +23,7 @@ function metadataRows(metadata) {
       rows: [
         ["Metadata schema", metadata.schemaVersion],
         ["Scoring engine", metadata.engineVersion],
+        ["Profile name", profile.label],
         ["Scoring profile", profile.id],
         ["Profile version", profile.version],
       ],

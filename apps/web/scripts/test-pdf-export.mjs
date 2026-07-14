@@ -84,6 +84,7 @@ const pdf = await createReportPdf({
     createdAt: "2026-07-13T08:42:00Z",
     durationMs: 185_000,
     scoringMetadata: createScoringMetadata({
+      profile: "content-quality",
       semanticRequested: true,
       semanticApplied: true,
       semanticJudge: {
