@@ -592,3 +592,24 @@ Verified with `npm run build`.
 
 Verified with the smoke test, production build, visual page renders, and an
 authenticated request against a stored analysis.
+
+## 32. Select an earlier analysis to compare — 2026-07-14
+
+> **Prompts:** Improve "Compare to previous" so a completed analysis can be
+> compared with any of the last ten analyses. Add a dropdown icon and show
+> each option like the analysis list, including the semantic-scoring tag. →
+> Excellent, update docs, create a branch, commit, and merge to main.
+
+**Summary:** Expanded the completed-analysis comparison action into a compact
+history picker.
+
+- The picker offers up to the ten immediately preceding completed analyses
+  from the same environment, keeping the viewed analysis as the comparison
+  target.
+- Each option shows the analysis date, semantic-scoring badge when applicable,
+  product count, score, grade, and duration.
+- The menu closes on selection, outside click, or Escape and exposes button,
+  menu, and menu-item semantics for assistive technology.
+- The existing authenticated comparison API and report page remain unchanged.
+
+Verified with `npm run build`.
