@@ -215,6 +215,21 @@ npm run test_product_pdf_export
 It validates both AI-enriched and no-AI reports and leaves the rendered source
 PDF at `tmp/pdfs/catalog-health-product-test.pdf` for visual inspection.
 
+PDF generation is split by report type under `apps/web/lib/report-pdf/`:
+
+| File | Responsibility |
+|------|----------------|
+| `common.js` | Shared PDF renderer, formatting helpers, charts, and scoring metadata tables. |
+| `analysis.js` | Completed analysis PDF export. |
+| `comparison.js` | Analysis comparison PDF export. |
+| `product.js` | Product detail PDF export, including saved AI Analysis sections and thumbnails. |
+| `statistics.js` | Account statistics PDF export. |
+
+`apps/web/lib/report-pdf.js` remains a compatibility barrel so existing API
+routes can keep importing `createReportPdf`, `createComparisonReportPdf`,
+`createProductReportPdf`, and `createStatisticsReportPdf` from the original
+module path.
+
 The product AI workflow has an integration test for structured output,
 streamed stages, owner-scoped persistence, image binding, table indicators,
 and deletion cascade:
