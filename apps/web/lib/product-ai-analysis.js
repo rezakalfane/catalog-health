@@ -111,7 +111,11 @@ claims. Put uncertain but useful inferences behind needsVerification=true, give
 their evidence, and use low/medium confidence. Prefer existing category IDs from
 the supplied taxonomy; set categoryId=null and isNewCategory=true only when a
 genuinely useful category is absent. Rewrites must be accurate, natural, useful,
-non-spammy, and ready to edit. Do not include HTML.
+non-spammy, and ready to edit. Do not include HTML except for
+description.rewrittenDescription: that field must be a single-line HTML string
+wrapped in one outer <div>...</div>. Use simple merchant-safe tags inside that
+div only when useful, such as <p>, <ul>, <li>, <strong>, and <br>. Do not use
+scripts, styles, event attributes, iframes, forms, images, or external links.
 
 For productRecommendations, choose no more than five products exclusively from
 productRecommendationCandidates. Never recommend the current product, invent a
@@ -165,6 +169,41 @@ function promptFor(context, imageCount) {
 recommendations, not generic ecommerce advice. The request includes ${imageCount}
 visually inspectable image(s). Existing automated health issues are context, not
 absolute truth.\n\n<product_data>\n${JSON.stringify(safe)}\n</product_data>`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function normalizeDescriptionHtml(value) {
+  let html = String(value || "").trim();
+  html = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/\son\w+="[^"]*"/gi, "")
+    .replace(/\son\w+='[^']*'/gi, "")
+    .replace(/\son\w+=\S+/gi, "")
+    .replace(/\s+/g, " ")
+    .replace(/>\s+</g, "><")
+    .trim();
+  if (!html) return "<div></div>";
+  if (!/<[a-z][\s\S]*>/i.test(html)) html = escapeHtml(html);
+  if (!/^<div(?:\s[^>]*)?>[\s\S]*<\/div>$/i.test(html)) html = `<div>${html}</div>`;
+  return html.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim();
+}
+
+function normalizeProductAiResult(result) {
+  return {
+    ...result,
+    description: {
+      ...result.description,
+      rewrittenDescription: normalizeDescriptionHtml(result.description?.rewrittenDescription),
+    },
+  };
 }
 
 const SAFE_IMAGE_HOST = /(^|\.)bigcommerce\.(com|net)$/i;
@@ -304,7 +343,7 @@ export async function analyzeProductWithAi({ settings, context, imageUrls = [], 
     step: "Validating recommendations",
     detail: "Checking the generated fields, evidence, confidence levels, and output structure.",
   });
-  const result = response.output;
+  const result = normalizeProductAiResult(response.output);
   if (imageFallback) {
     result.imageReview = {
       ...result.imageReview,

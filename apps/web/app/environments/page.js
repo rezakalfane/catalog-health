@@ -122,9 +122,12 @@ export default function EnvironmentsPage() {
               type="password"
               value={form.accessToken}
               onChange={(e) => setForm({ ...form, accessToken: e.target.value })}
-              placeholder="Products: read-only scope is enough"
+              placeholder="Products: modify scope is required to push AI updates"
               required={!editingId}
             />
+            <p className="muted form-help">
+              Read-only tokens can run analyses; Products: modify scope is needed for AI push changes to update products.
+            </p>
             <ScoringProfileSelect
               value={form.scoringProfileId}
               onChange={(scoringProfileId) => setForm({ ...form, scoringProfileId })}

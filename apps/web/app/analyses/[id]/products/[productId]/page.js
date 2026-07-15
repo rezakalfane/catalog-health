@@ -414,7 +414,7 @@ export default function ProductDrilldownPage() {
         )}
       </div>
 
-      <ProductAiAnalysis state={aiAnalysis} />
+      <ProductAiAnalysis state={aiAnalysis} product={row} />
     </>
   );
 }

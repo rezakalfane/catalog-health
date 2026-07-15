@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth-helpers";
 import ActionIcon from "@/components/ActionIcon";
+import AiAnalyzedBadge from "@/components/AiAnalyzedBadge";
 import DimensionBars from "@/components/DimensionBars";
 import GradeLozenge from "@/components/GradeLozenge";
 import ProductThumb from "@/components/ProductThumb";
@@ -259,7 +260,10 @@ export default async function StatisticsPage() {
                       <td>
                         <Link className="prod-cell" href={`/analyses/${product.analysisId}/products/${product.id}`}>
                           <ProductThumb src={product.details?.thumbnailUrl || product.details?.imageUrl} alt="" size={28} />
-                          <span>{product.name || product.sku || product.id}</span>
+                          <span className="product-name-with-ai">
+                            <span>{product.name || product.sku || product.id}</span>
+                            <AiAnalyzedBadge analyzed={product.aiAnalyzed} />
+                          </span>
                         </Link>
                       </td>
                       <td>{product.environmentName}</td>

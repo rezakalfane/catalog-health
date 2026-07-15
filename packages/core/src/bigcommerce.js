@@ -1,5 +1,5 @@
 /**
- * BigCommerce v3 Catalog API client (read-only) + synthetic demo catalog.
+ * BigCommerce v3 Catalog API client + synthetic demo catalog.
  * Uses global fetch (Node 18+).
  */
 
@@ -35,6 +35,45 @@ async function getPage(storeHash, token, path, params) {
     if (res.status === 401) {
       throw new Error(
         "Authentication failed (401). Check the token has Products: read-only scope."
+      );
+    }
+    if (!res.ok) throw new Error(`BigCommerce API ${res.status} on ${path}`);
+    return res.json();
+  }
+  throw new Error("Gave up after repeated rate limiting.");
+}
+
+async function sendJson(storeHash, token, method, path, body) {
+  const url = new URL(`${API_BASE}/${storeHash}/v3${path}`);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let res;
+    try {
+      res = await fetch(url, {
+        method,
+        headers: {
+          "X-Auth-Token": token,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (err) {
+      if (err.name === "TimeoutError" || err.name === "AbortError") {
+        throw new Error(
+          `BigCommerce API timed out after ${Math.round(REQUEST_TIMEOUT_MS / 1000)}s on ${path}`
+        );
+      }
+      throw err;
+    }
+    if (res.status === 429) {
+      const wait = Number(res.headers.get("X-Rate-Limit-Time-Reset-Ms") || 30000);
+      await new Promise((r) => setTimeout(r, wait));
+      continue;
+    }
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(
+        `BigCommerce API ${res.status}. Check the token has Products: modify scope.`
       );
     }
     if (!res.ok) throw new Error(`BigCommerce API ${res.status} on ${path}`);
@@ -104,6 +143,52 @@ export async function fetchProduct({ storeHash, token, productId }) {
     token,
     `/catalog/products/${encodeURIComponent(productId)}`,
     { include: PRODUCT_INCLUDES }
+  );
+  return payload.data || null;
+}
+
+/** Update deterministic product fields through the BigCommerce Catalog API. */
+export async function updateProduct({ storeHash, token, productId, data }) {
+  const payload = await sendJson(
+    storeHash,
+    token,
+    "PUT",
+    `/catalog/products/${encodeURIComponent(productId)}`,
+    data
+  );
+  return payload.data || null;
+}
+
+/** Create or update one product custom field. */
+export async function upsertProductCustomField({
+  storeHash,
+  token,
+  productId,
+  customFieldId,
+  name,
+  value,
+}) {
+  const path = customFieldId
+    ? `/catalog/products/${encodeURIComponent(productId)}/custom-fields/${encodeURIComponent(customFieldId)}`
+    : `/catalog/products/${encodeURIComponent(productId)}/custom-fields`;
+  const payload = await sendJson(
+    storeHash,
+    token,
+    customFieldId ? "PUT" : "POST",
+    path,
+    { name, value }
+  );
+  return payload.data || null;
+}
+
+/** Update one product image, currently used for suggested alt text. */
+export async function updateProductImage({ storeHash, token, productId, imageId, data }) {
+  const payload = await sendJson(
+    storeHash,
+    token,
+    "PUT",
+    `/catalog/products/${encodeURIComponent(productId)}/images/${encodeURIComponent(imageId)}`,
+    data
   );
   return payload.data || null;
 }

@@ -144,6 +144,15 @@ export function getProductAiAnalysis(analysisId, productId) {
   return request(`/api/analyses/${analysisId}/products/${productId}/ai-analysis`);
 }
 
+/** Push one saved AI suggestion to the source BigCommerce product. */
+export function pushProductAiChange(analysisId, productId, changeId, options = {}) {
+  return jsonRequest(
+    `/api/analyses/${analysisId}/products/${productId}/ai-analysis`,
+    "PATCH",
+    { changeId, ...options }
+  );
+}
+
 /** Generate or regenerate a rich AI product review with the selected LLM. */
 export async function runProductAiAnalysis(analysisId, productId, modelConfigurationId, onProgress) {
   const response = await fetch(
@@ -193,6 +202,7 @@ export async function runProductAiAnalysis(analysisId, productId, modelConfigura
   if (!completed) throw new ApiError("AI Analysis ended before returning a result.");
   return {
     review: completed.review,
+    pushState: completed.pushState || {},
     models: completed.models || [],
     defaultModelId: completed.defaultModelId || null,
   };

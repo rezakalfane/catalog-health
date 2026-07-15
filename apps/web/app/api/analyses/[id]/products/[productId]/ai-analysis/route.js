@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
-import { demoCatalog, fetchProduct, stripHtml } from "@catalog-health/core";
+import {
+  demoCatalog,
+  fetchProduct,
+  stripHtml,
+  updateProduct,
+  updateProductImage,
+  upsertProductCustomField,
+} from "@catalog-health/core";
 import { getApiUser } from "@/lib/auth-helpers";
 import {
   getAnalysis,
@@ -46,6 +53,7 @@ function compactProduct(product, row) {
     inventoryTracking: product?.inventory_tracking ?? row.details?.inventoryTracking ?? null,
     inventoryLevel: product?.inventory_level ?? row.details?.inventoryLevel ?? null,
     isVisible: product?.is_visible ?? row.details?.isVisible ?? null,
+    relatedProducts: product?.related_products || [],
     identifiers: {
       gtin: product?.gtin ?? row.details?.gtin ?? "",
       upc: product?.upc ?? row.details?.upc ?? "",
@@ -225,6 +233,301 @@ function modelOptions(userId) {
   return { models, defaultModelId: defaultModel?.id || null };
 }
 
+function pushStateFromProduct(product) {
+  return {
+    relatedProductIds: (product?.related_products || [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0),
+  };
+}
+
+async function currentPushState(analysis, row, userId) {
+  if (analysis.environmentId === "demo") return pushStateFromProduct(null);
+  const environment = getEnvironment(userId, analysis.environmentId);
+  if (!environment) return pushStateFromProduct(null);
+  const product = await fetchProduct({
+    storeHash: environment.storeHash,
+    token: environment.accessToken,
+    productId: row.id,
+  }).catch(() => null);
+  return pushStateFromProduct(product);
+}
+
+function normalizeFieldName(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function numericValue(value, field) {
+  const number = Number(String(value).replace(/[$,]/g, "").trim());
+  if (!Number.isFinite(number)) throw new Error(`Suggested ${field} is not a valid number.`);
+  return number;
+}
+
+function booleanValue(value) {
+  const normalized = normalizeFieldName(value);
+  if (["true", "yes", "visible", "1"].includes(normalized)) return true;
+  if (["false", "no", "hidden", "0"].includes(normalized)) return false;
+  throw new Error("Suggested visibility is not a valid yes/no value.");
+}
+
+function normalizeComparable(value) {
+  return String(value ?? "").trim().replace(/\s+/g, " ");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function normalizeDescriptionHtmlForPush(value) {
+  let html = String(value || "").trim();
+  html = html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/\son\w+="[^"]*"/gi, "")
+    .replace(/\son\w+='[^']*'/gi, "")
+    .replace(/\son\w+=\S+/gi, "")
+    .replace(/\s+/g, " ")
+    .replace(/>\s+</g, "><")
+    .trim();
+  if (!html) return "<div></div>";
+  if (!/<[a-z][\s\S]*>/i.test(html)) html = `<p>${escapeHtml(html)}</p>`;
+  if (!/^<div(?:\s[^>]*)?>[\s\S]*<\/div>$/i.test(html)) html = `<div>${html}</div>`;
+  return html.replace(/\s+/g, " ").replace(/>\s+</g, "><").trim();
+}
+
+function sameNumber(a, b) {
+  const left = Number(a);
+  const right = Number(b);
+  return Number.isFinite(left) && Number.isFinite(right) && Math.abs(left - right) < 0.000001;
+}
+
+function coreFieldPatch(field, value) {
+  const key = normalizeFieldName(field);
+  if (["title", "name", "product title"].includes(key)) return { name: String(value) };
+  if (["description", "product description"].includes(key)) return { description: String(value) };
+  if (key === "sku") return { sku: String(value) };
+  if (key === "gtin") return { gtin: String(value) };
+  if (key === "upc") return { upc: String(value) };
+  if (key === "mpn") return { mpn: String(value) };
+  if (key === "price") return { price: numericValue(value, "price") };
+  if (["sale price", "sale_price"].includes(key)) return { sale_price: numericValue(value, "sale price") };
+  if (key === "weight") return { weight: numericValue(value, "weight") };
+  if (["visible", "visibility", "is visible"].includes(key)) return { is_visible: booleanValue(value) };
+  return null;
+}
+
+function productChangeHasEffect(current, data) {
+  return Object.entries(data || {}).some(([key, value]) => {
+    if (["price", "sale_price", "weight"].includes(key)) return !sameNumber(current?.[key] || 0, value);
+    if (key === "categories") {
+      const before = new Set((current?.categories || []).map(String));
+      const after = new Set((value || []).map(String));
+      return before.size !== after.size || [...after].some((id) => !before.has(id));
+    }
+    if (typeof value === "boolean") return Boolean(current?.[key]) !== value;
+    return normalizeComparable(current?.[key]) !== normalizeComparable(value);
+  });
+}
+
+function assertHasEffect(hasEffect) {
+  if (!hasEffect) {
+    const error = new Error("This suggestion already matches the current BigCommerce product.");
+    error.status = 409;
+    throw error;
+  }
+}
+
+function savedPushIds(review) {
+  return new Set((review?.result?.pushedChanges || []).map((change) => change.id));
+}
+
+function pushableChangesFromReview(review) {
+  const result = review?.result || {};
+  const changes = [];
+  if (result.title?.suggestedTitle) {
+    changes.push({
+      id: "title.suggestedTitle",
+      label: "Suggested title",
+      kind: "product",
+      data: { name: result.title.suggestedTitle },
+      value: result.title.suggestedTitle,
+    });
+  }
+  if (result.description?.rewrittenDescription) {
+    const descriptionHtml = normalizeDescriptionHtmlForPush(result.description.rewrittenDescription);
+    changes.push({
+      id: "description.rewrittenDescription",
+      label: "Rewritten product description",
+      kind: "product",
+      data: { description: descriptionHtml },
+      value: descriptionHtml,
+    });
+  }
+  (result.derivedFields || []).forEach((field, index) => {
+    if (!field?.field || field.value == null) return;
+    if (field.fieldType === "custom") {
+      changes.push({
+        id: `derivedFields.${index}`,
+        label: `Custom field: ${field.field}`,
+        kind: "customField",
+        name: field.field,
+        value: String(field.value),
+      });
+      return;
+    }
+    if (field.fieldType === "core") {
+      const data = coreFieldPatch(field.field, field.value);
+      if (data) {
+        changes.push({
+          id: `derivedFields.${index}`,
+          label: `Product field: ${field.field}`,
+          kind: "product",
+          data,
+          value: field.value,
+        });
+      }
+    }
+  });
+  (result.placement?.suggestedCategories || []).forEach((category, index) => {
+    if (category?.categoryId == null || category.isNewCategory) return;
+    changes.push({
+      id: `placement.suggestedCategories.${index}`,
+      label: `Category: ${category.name || category.categoryId}`,
+      kind: "category",
+      categoryId: Number(category.categoryId),
+      value: category.name || `Category ${category.categoryId}`,
+    });
+  });
+  if (result.feedAndDiscovery?.seoTitle) {
+    changes.push({
+      id: "feedAndDiscovery.seoTitle",
+      label: "SEO title",
+      kind: "product",
+      data: { page_title: result.feedAndDiscovery.seoTitle },
+      value: result.feedAndDiscovery.seoTitle,
+    });
+  }
+  if (result.feedAndDiscovery?.seoDescription) {
+    changes.push({
+      id: "feedAndDiscovery.seoDescription",
+      label: "SEO description",
+      kind: "product",
+      data: { meta_description: result.feedAndDiscovery.seoDescription },
+      value: result.feedAndDiscovery.seoDescription,
+    });
+  }
+  if ((result.feedAndDiscovery?.searchTerms || []).length) {
+    changes.push({
+      id: "feedAndDiscovery.searchTerms",
+      label: "Search terms",
+      kind: "product",
+      data: { search_keywords: result.feedAndDiscovery.searchTerms.join(", ") },
+      value: result.feedAndDiscovery.searchTerms.join(", "),
+    });
+  }
+  (result.imageReview?.images || []).forEach((image) => {
+    if (!image?.imageIndex || !image.suggestedAltText) return;
+    changes.push({
+      id: `imageReview.images.${image.imageIndex}.altText`,
+      label: `Image ${image.imageIndex} alt text`,
+      kind: "image",
+      imageIndex: Number(image.imageIndex),
+      value: image.suggestedAltText,
+    });
+  });
+  (result.productRecommendations || []).forEach((recommendation) => {
+    const relatedProductId = Number(recommendation?.productId);
+    if (!Number.isFinite(relatedProductId) || relatedProductId <= 0) return;
+    changes.push({
+      id: `productRecommendations.${relatedProductId}.relatedProduct`,
+      label: `Related product: ${recommendation.title || relatedProductId}`,
+      kind: "relatedProduct",
+      relatedProductId,
+      value: recommendation.title || `Product ${relatedProductId}`,
+    });
+  });
+  const pushed = savedPushIds(review);
+  return changes.map((change) => ({ ...change, pushed: pushed.has(change.id) }));
+}
+
+async function applyPushableChange({ change, analysis, row, userId }) {
+  if (analysis.environmentId === "demo") {
+    throw new Error("Demo products cannot be updated in BigCommerce.");
+  }
+  const environment = getEnvironment(userId, analysis.environmentId);
+  if (!environment) throw new Error("The source environment no longer exists.");
+  const current = await fetchProduct({
+    storeHash: environment.storeHash,
+    token: environment.accessToken,
+    productId: row.id,
+  });
+  if (!current) throw new Error("The current BigCommerce product could not be loaded.");
+
+  if (change.kind === "product") {
+    assertHasEffect(productChangeHasEffect(current, change.data));
+    await updateProduct({
+      storeHash: environment.storeHash,
+      token: environment.accessToken,
+      productId: row.id,
+      data: change.data,
+    });
+  } else if (change.kind === "customField") {
+    const existing = (current.custom_fields || []).find(
+      (field) => normalizeFieldName(field.name) === normalizeFieldName(change.name)
+    );
+    assertHasEffect(!existing || normalizeComparable(existing.value) !== normalizeComparable(change.value));
+    await upsertProductCustomField({
+      storeHash: environment.storeHash,
+      token: environment.accessToken,
+      productId: row.id,
+      customFieldId: existing?.id,
+      name: change.name,
+      value: change.value,
+    });
+  } else if (change.kind === "category") {
+    const categories = [...new Set([...(current.categories || row.categories || []), change.categoryId].map(Number))];
+    assertHasEffect(!(current.categories || []).map(String).includes(String(change.categoryId)));
+    await updateProduct({
+      storeHash: environment.storeHash,
+      token: environment.accessToken,
+      productId: row.id,
+      data: { categories },
+    });
+  } else if (change.kind === "image") {
+    const image = (current.images || [])[change.imageIndex - 1];
+    if (!image?.id) throw new Error(`Image ${change.imageIndex} is not available on the current BigCommerce product.`);
+    assertHasEffect(normalizeComparable(image.description) !== normalizeComparable(change.value));
+    await updateProductImage({
+      storeHash: environment.storeHash,
+      token: environment.accessToken,
+      productId: row.id,
+      imageId: image.id,
+      data: { description: change.value },
+    });
+  } else if (change.kind === "relatedProduct") {
+    const relatedProducts = (current.related_products || [])
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
+    assertHasEffect(!relatedProducts.map(String).includes(String(change.relatedProductId)));
+    await updateProduct({
+      storeHash: environment.storeHash,
+      token: environment.accessToken,
+      productId: row.id,
+      data: { related_products: [...new Set([...relatedProducts, change.relatedProductId])] },
+    });
+  } else {
+    throw new Error("This AI suggestion cannot be pushed to BigCommerce.");
+  }
+}
+
 export async function GET(_request, { params }) {
   const user = await getApiUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -233,8 +536,63 @@ export async function GET(_request, { params }) {
   if (!analysis || !row) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json({
     review: getProductAiAnalysis(user.id, id, productId),
+    pushState: await currentPushState(analysis, row, user.id),
     ...modelOptions(user.id),
   });
+}
+
+export async function PATCH(request, { params }) {
+  const user = await getApiUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { id, productId } = await params;
+  const { analysis, row } = await ownedProduct(user.id, id, productId);
+  if (!analysis || !row) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const review = getProductAiAnalysis(user.id, id, productId);
+  if (!review?.result) return NextResponse.json({ error: "Run AI Analysis before pushing changes." }, { status: 409 });
+
+  const body = await request.json().catch(() => ({}));
+  const change = pushableChangesFromReview(review).find((item) => item.id === body.changeId);
+  if (!change) return NextResponse.json({ error: "This AI suggestion cannot be pushed to BigCommerce." }, { status: 400 });
+  if (change.pushed && !body.force) {
+    return NextResponse.json({
+      review,
+      change,
+      pushState: await currentPushState(analysis, row, user.id),
+    });
+  }
+
+  try {
+    await applyPushableChange({ change, analysis, row, userId: user.id });
+    const pushedChange = {
+      id: change.id,
+      label: change.label,
+      kind: change.kind,
+      value: change.value,
+      pushedAt: new Date().toISOString(),
+    };
+    const nextResult = {
+      ...review.result,
+      pushedChanges: [
+        ...(review.result.pushedChanges || []).filter((item) => item.id !== change.id),
+        pushedChange,
+      ],
+    };
+    const nextReview = saveProductAiAnalysis(user.id, id, productId, {
+      ...review,
+      result: nextResult,
+      generatedAt: review.generatedAt,
+    });
+    return NextResponse.json({
+      review: nextReview,
+      change: pushedChange,
+      pushState: await currentPushState(analysis, row, user.id),
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error?.message || "Could not push this change to BigCommerce." },
+      { status: error?.status || 502 }
+    );
+  }
 }
 
 export async function POST(request, { params }) {
@@ -334,7 +692,12 @@ export async function POST(request, { params }) {
             result: generated.result,
             generatedAt: new Date().toISOString(),
           });
-          send({ type: "result", review, ...modelOptions(user.id) });
+          send({
+            type: "result",
+            review,
+            pushState: pushStateFromProduct(source.product),
+            ...modelOptions(user.id),
+          });
         } catch (error) {
           console.error("Product AI analysis failed", error);
           send({ type: "error", error: error?.message || "AI Analysis failed." });
