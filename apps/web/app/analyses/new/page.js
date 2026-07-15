@@ -61,7 +61,10 @@ function NewAnalysisForm() {
   return (
     <>
       <div className="page-head">
-        <h1>New analysis</h1>
+        <div>
+          <h1>New analysis</h1>
+          <p className="muted">Run a live catalog health report or use demo data to review scoring, issues, and product opportunities.</p>
+        </div>
       </div>
 
       <div className="card">

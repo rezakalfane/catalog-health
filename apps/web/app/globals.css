@@ -98,18 +98,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   text-transform: uppercase;
 }
 .sidebar-subnav { display: flex; flex-direction: column; gap: 0.15rem; padding-left: 0.45rem; }
-.sidebar-subnav a { position: relative; padding-left: 0.85rem; }
-.sidebar-subnav a::before {
-  content: "";
-  position: absolute;
-  left: 0.25rem;
-  top: 50%;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #7180a8;
-  transform: translateY(-50%);
-}
+.sidebar-subnav a { padding-left: 0.85rem; }
 
 .main { flex: 1; padding: 2rem 2.5rem; max-width: 1100px; }
 
@@ -127,7 +116,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   .sidebar-section-title { padding: 0.45rem 0.35rem 0.45rem 0.6rem; }
   .sidebar-subnav { flex-direction: row; padding-left: 0; }
   .sidebar-subnav a { padding-left: 0.6rem; }
-  .sidebar-subnav a::before { display: none; }
   .main { padding: 1.25rem; }
 }
 
@@ -189,6 +177,54 @@ td.bad { color: var(--grade-f); font-weight: 700; }
 .distribution-fill.D { background: var(--grade-d); }
 .distribution-fill.F { background: var(--grade-f); }
 .distribution-count { color: var(--ink-soft); font-size: 0.82rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.grade-distribution-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.35rem;
+  min-height: 190px;
+  padding-top: 0.8rem;
+}
+.grade-distribution-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 2.4rem;
+}
+.grade-distribution-count {
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.grade-distribution-bar-track {
+  display: flex;
+  align-items: flex-end;
+  width: 2.3rem;
+  height: 110px;
+}
+.grade-distribution-bar {
+  display: block;
+  width: 100%;
+  min-height: 4px;
+  border-radius: 9px 9px 4px 4px;
+}
+.grade-distribution-bar.A { background: var(--grade-a); }
+.grade-distribution-bar.B { background: var(--grade-b); }
+.grade-distribution-bar.C { background: var(--grade-c); }
+.grade-distribution-bar.D { background: var(--grade-d); }
+.grade-distribution-bar.F { background: var(--grade-f); }
+.grade-distribution-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+.grade-distribution-label.A { color: var(--grade-a); }
+.grade-distribution-label.B { color: var(--grade-b); }
+.grade-distribution-label.C { color: var(--grade-c); }
+.grade-distribution-label.D { color: var(--grade-d); }
+.grade-distribution-label.F { color: var(--grade-f); }
 
 table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 th { text-align: left; color: var(--ink-soft); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
@@ -211,6 +247,7 @@ textarea { resize: vertical; }
 .form-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .compact-button { padding: 0.35rem 0.55rem; font-size: 0.82rem; white-space: nowrap; }
 .model-actions { white-space: nowrap; text-align: right; }
+.model-actions .delete-analysis-button { margin-left: 0.25rem; }
 .model-default-badge {
   display: inline-flex;
   padding: 0.2rem 0.45rem;
@@ -259,6 +296,18 @@ button.delete-analysis-button.icon-only {
   border-radius: 5px;
 }
 button.delete-analysis-button.icon-only .action-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+button.settings-edit-button {
+  width: 1.8rem;
+  height: 1.8rem;
+  padding: 0;
+  border-radius: 5px;
+  background: var(--signal);
+  color: #fff;
+}
+button.settings-edit-button .action-icon {
   width: 0.85rem;
   height: 0.85rem;
 }
@@ -466,6 +515,14 @@ th.sortable .sort-arrow { display: inline-block; width: 1em; font-size: 0.7em; m
   margin-bottom: 0.5rem;
 }
 .section-action-head h2 { margin-bottom: 0; }
+.section-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 0.25rem;
+}
 .compare-products th:nth-child(2),
 .compare-products th:nth-child(3),
 .compare-products th:nth-child(4),
@@ -588,16 +645,22 @@ a.progress-link:hover .progress-top { color: var(--signal); }
 
 .muted { color: var(--ink-soft); font-size: 0.88rem; }
 .error { color: var(--grade-f); font-size: 0.9rem; }
-.page-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; gap: 1rem; flex-wrap: wrap; }
-.page-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-.statistics-page-head { flex-wrap: nowrap; }
+.page-head {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  margin-bottom: 1.5rem;
+  gap: 0.85rem;
+}
+.page-head > :last-child:not(:only-child) { align-self: flex-end; }
+.page-actions { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; flex-wrap: wrap; }
 .statistics-title-block { min-width: 0; }
 .statistics-page-head .page-actions {
   justify-content: flex-end;
   flex: 0 0 auto;
 }
 @media (max-width: 860px) {
-  .statistics-page-head { flex-wrap: wrap; }
+  .page-head > :last-child:not(:only-child) { align-self: flex-start; }
   .statistics-page-head .page-actions { justify-content: flex-start; }
 }
 .page-head .btn,
@@ -706,6 +769,7 @@ a.progress-link:hover .progress-top { color: var(--signal); }
 /* On-demand product AI review --------------------------------------------- */
 .ai-analysis { scroll-margin-top: 1rem; }
 .ai-analysis-intro { margin: 0.15rem 0 0; max-width: 52rem; }
+.ai-analysis-actions { flex-wrap: nowrap; }
 .ai-analysis-error {
   padding: 0.7rem 0.85rem;
   border: 1px solid #f1b8c1;
@@ -800,13 +864,22 @@ button.ai-copy-button { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
 .ai-image-score { display: flex; justify-content: space-between; gap: 0.8rem; }
 .ai-image-score span { color: var(--signal); font-weight: 750; }
 .ai-product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0.9rem; margin-top: 1rem; }
-.ai-product-card { display: flex; gap: 0.9rem; min-width: 0; padding: 0.9rem; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+.ai-product-card { display: grid; grid-template-rows: auto 1fr; gap: 0.85rem; min-width: 0; padding: 0.9rem; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+.ai-product-card-main { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 0.9rem; align-items: start; min-width: 0; }
 .ai-product-thumb-link { flex: 0 0 auto; border-radius: 8px; }
 .ai-product-thumb-link:focus-visible { outline: 3px solid rgba(42, 75, 141, 0.25); outline-offset: 3px; }
 .ai-product-card .prod-thumb { width: 128px; height: 128px; border-radius: 8px; }
 .ai-product-card-body { min-width: 0; flex: 1; }
 .ai-product-title { color: var(--ink); font-weight: 750; line-height: 1.35; }
-.ai-product-category { margin: 0.3rem 0 0.55rem; font-size: 0.78rem; line-height: 1.35; }
+.ai-product-category {
+  display: -webkit-box;
+  margin: 0.3rem 0 0.55rem;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
 .ai-product-facts { display: flex; flex-wrap: wrap; gap: 0.3rem 0.6rem; color: var(--ink-soft); font-size: 0.72rem; }
 .ai-product-facts strong { color: var(--grade-a); }
 .ai-old-price { text-decoration: line-through; }
@@ -828,9 +901,10 @@ button.ai-copy-button { padding: 0.25rem 0.5rem; font-size: 0.72rem; }
 
 @media (max-width: 850px) {
   .ai-two-column, .ai-three-column { grid-template-columns: 1fr; }
+  .ai-analysis-actions { flex-wrap: wrap; }
   .ai-summary { flex-direction: column; }
   .ai-image-card-main { flex-direction: column; }
-  .ai-product-card { flex-direction: column; }
+  .ai-product-card-main { grid-template-columns: 1fr; }
   .profile-editor-grid { grid-template-columns: 1fr; }
 }
 

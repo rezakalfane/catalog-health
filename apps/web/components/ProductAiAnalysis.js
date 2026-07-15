@@ -74,28 +74,30 @@ function ProductRecommendationCard({ recommendation, analysisId }) {
   const price = Number(recommendation.price) > 0 ? `$${recommendation.price}` : "Price unavailable";
   return (
     <article className="ai-product-card">
-      <Link
-        className="ai-product-thumb-link"
-        href={`/analyses/${analysisId}/products/${recommendation.productId}`}
-        aria-label={`Open ${recommendation.title}`}
-      >
-        <ProductThumb src={recommendation.thumbnailUrl} alt="" size={128} />
-      </Link>
-      <div className="ai-product-card-body">
-        <Link className="ai-product-title" href={`/analyses/${analysisId}/products/${recommendation.productId}`}>
-          {recommendation.title}
+      <div className="ai-product-card-main">
+        <Link
+          className="ai-product-thumb-link"
+          href={`/analyses/${analysisId}/products/${recommendation.productId}`}
+          aria-label={`Open ${recommendation.title}`}
+        >
+          <ProductThumb src={recommendation.thumbnailUrl} alt="" size={128} />
         </Link>
-        <p className="muted ai-product-category">
-          {(recommendation.categoryNames || []).join(" · ") || "Uncategorized"}
-        </p>
-        <div className="ai-product-facts">
-          <span className={hasSalePrice ? "ai-old-price" : ""}>{price}</span>
-          {hasSalePrice && <strong>${recommendation.salePrice}</strong>}
-          <span>SKU {recommendation.sku || "—"}</span>
-          <span>Product ID {recommendation.productId}</span>
+        <div className="ai-product-card-body">
+          <Link className="ai-product-title" href={`/analyses/${analysisId}/products/${recommendation.productId}`}>
+            {recommendation.title}
+          </Link>
+          <p className="muted ai-product-category">
+            {(recommendation.categoryNames || []).join(" · ") || "Uncategorized"}
+          </p>
+          <div className="ai-product-facts">
+            <span className={hasSalePrice ? "ai-old-price" : ""}>{price}</span>
+            {hasSalePrice && <strong>${recommendation.salePrice}</strong>}
+            <span>SKU {recommendation.sku || "—"}</span>
+            <span>Product ID {recommendation.productId}</span>
+          </div>
         </div>
-        <p className="ai-product-reason">{recommendation.reason}</p>
       </div>
+      <p className="ai-product-reason">{recommendation.reason}</p>
     </article>
   );
 }
@@ -198,16 +200,16 @@ export default function ProductAiAnalysis({ state }) {
             facts and claims before publishing.
           </p>
         </div>
-        {review && (
-          <div className="ai-action-controls">
-            <ModelSelect state={state} id="ai-model-section" />
-            <button type="button" className="secondary" onClick={state.run} disabled={state.running || !state.models.length}>
-              <ActionIcon name="refresh" />
-              {state.running ? "Analyzing…" : "Refresh"}
-            </button>
-          </div>
-        )}
       </div>
+      {review && (
+        <div className="section-actions-row ai-analysis-actions">
+          <ModelSelect state={state} id="ai-model-section" />
+          <button type="button" className="secondary" onClick={state.run} disabled={state.running || !state.models.length}>
+            <ActionIcon name="refresh" />
+            {state.running ? "Analyzing…" : "Refresh"}
+          </button>
+        </div>
+      )}
 
       {state.error && <p className="error ai-analysis-error">{state.error}</p>}
       {state.running && (

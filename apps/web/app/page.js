@@ -12,6 +12,8 @@ import DeleteAnalysisButton from "@/components/DeleteAnalysisButton";
 
 export const dynamic = "force-dynamic";
 
+const SCORE_HISTORY_LIMIT = 30;
+
 export default async function Dashboard() {
   const user = await requireUser();
   const environments = listEnvironments(user.id).map(redactEnvironment);
@@ -32,13 +34,19 @@ export default async function Dashboard() {
       grade: a.summary.grade,
       productCount: a.summary.productCount,
     });
+    if (historyByEnv.get(a.environmentId).length > SCORE_HISTORY_LIMIT) {
+      historyByEnv.get(a.environmentId).shift();
+    }
     latestByEnv.set(a.environmentId, a);
   }
 
   return (
     <>
       <div className="page-head">
-        <h1>Dashboard</h1>
+        <div>
+          <h1>Dashboard</h1>
+          <p className="muted">Monitor catalog health, latest analyses, scoring profiles, and improvement activity across your stores.</p>
+        </div>
         <Link className="btn" href="/analyses/new">
           <ActionIcon name="play" />
           Run new analysis
