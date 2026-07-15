@@ -118,7 +118,7 @@ function NewAnalysisForm() {
                     >
                       {models.map((model) => (
                         <option key={model.id} value={model.id}>
-                          {model.name} — {model.model}{model.isDefault ? " (default)" : ""}
+                          {model.name || model.model}{model.isDefault ? " (default)" : ""}
                         </option>
                       ))}
                     </select>

@@ -31,6 +31,7 @@ export default async function RootLayout({ children }) {
             </div>
             <Link href="/">Dashboard</Link>
             <Link href="/analyses/new">New analysis</Link>
+            <Link href="/statistics">Statistics</Link>
             <div className="sidebar-section" role="group" aria-labelledby="sidebar-settings-label">
               <span className="sidebar-section-title" id="sidebar-settings-label">Settings</span>
               <div className="sidebar-subnav">

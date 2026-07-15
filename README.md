@@ -74,6 +74,12 @@ npm run dev
   deletion. A full **Delete analysis** button is also available from the
   report itself. The Dashboard Recent analyses table provides the same blue
   PDF, green full-product CSV, and red confirmed-delete actions.
+- **Statistics** — account-wide rollups from the latest live-catalog analysis
+  per environment: headline counts, weighted account score, grade distribution,
+  dimension averages, AI/semantic coverage, commercial exposure on D/F
+  products, environment leaderboard, top issues by count and impact,
+  highest-impact products, weakest categories, and scoring-profile usage. The
+  same account summary can be exported as a paginated PDF.
 - **Analysis comparison** — from a completed analysis, choose any of the ten
   immediately preceding runs from the same environment. The picker shows each
   run's date, product count, score, grade, duration, and semantic-scoring tag.
@@ -141,6 +147,46 @@ npm run test_llm_models
 npm run test_scoring_profiles
 ```
 
+## Product AI Analysis
+
+Product AI Analysis is an on-demand, saved review generated from a product
+detail page. It uses the selected model configuration for that run and stores
+the configuration name, provider, raw model id, source mode, image-analysis
+flag, generated timestamp, and structured result. The latest saved review is
+shown again when the product page is reopened and is included in the product
+PDF export.
+
+During generation, the product page streams the current server stage so the
+operator can see whether the workflow is loading catalog context, preparing
+images, generating the review, validating structured output, or saving the
+result. Vision-capable models receive up to five safely retrievable
+BigCommerce-hosted images; models that reject image input retry automatically
+with product data only.
+
+| Section | What it contains | Intended use |
+|---|---|---|
+| AI metadata | Saved configuration name, provider, model id, review source, image-analysis status, and generated time. | Audit which model produced the recommendation and whether images were inspected. |
+| Executive summary | Short overall assessment plus a confidence badge. | Quickly understand the product's biggest catalog and merchandising opportunities. |
+| Priority actions | Ranked action cards with priority, recommendation, evidence, impact, effort, and verification flag. | Decide what to fix first and whether a human needs to confirm the claim. |
+| Title | Current-title assessment, suggested title, alternatives, and rationale. | Improve titles while staying inside the scoring profile's length and clarity expectations. |
+| Description | Assessment, short description, rewritten long description, selling points, and missing information. | Produce merchant-ready copy and identify facts that cannot be safely inferred. |
+| Suggested fields | Derived custom, system, or feed fields with suggested value, type, confidence, evidence, and verification marker. | Fill catalog attributes only when the source data supports the recommendation. |
+| Placement & merchandising | Suggested categories, merchandising collections, and cross-sell ideas. | Improve taxonomy and storefront merchandising using product context and existing catalog structure. |
+| Feed, SEO & discovery | Google product category, product type, SEO title, SEO description, and search terms. | Prepare cleaner feed values and search/discovery copy. |
+| Product recommendations | Up to five catalog-grounded complementary, substitute, or adjacent products with thumbnail, title, categories, price, SKU, product id, and reason. | Support cross-sell, upsell, bundling, and related-product merchandising from the analyzed catalog. |
+| Feed-ready attributes | Feed-specific attributes with suggested value, confidence, evidence, and verification marker. | Improve marketplace and AI-agent feed readiness without inventing unsupported values. |
+| Image review | Summary, recommended hero image, per-image thumbnail, role, quality score, observations, suggested alt text, missing shots, and image limitations. | Assess image quality, coverage, accessibility, and whether more photography is needed. |
+| Conversion opportunities | Opportunities and rationale tied to merchandising or product-page conversion. | Identify non-scoring improvements likely to help shoppers evaluate or buy the product. |
+| Data-quality risks | Risk, supporting evidence, and recommended check. | Surface places where the catalog data may mislead the model, merchant, or shopper. |
+| Questions for the merchant | Follow-up questions for missing or ambiguous facts. | Collect inputs that should not be guessed by the model. |
+| Checks and limitations | Identifier warnings plus model-stated limitations. | Keep generated recommendations bounded by what was actually known at review time. |
+
+The AI review treats catalog copy as untrusted input and asks the model to
+ground recommendations in stored product facts, scoring issues, category
+context, commercial signals, custom fields, options, variants, and the
+catalog-recommendation shortlist. Suggested values still require merchant
+review before publishing, especially fields marked for verification.
+
 ### PDF export smoke test
 
 ```bash
@@ -186,12 +232,12 @@ do not rewrite history. The selected profile appears below environment names
 across the dashboard and analysis views, and each row in an environment's
 Analysis history table shows the profile used for that specific run.
 
-| Profile | Emphasis |
-|---|---|
-| Balanced | Even coverage across content, structure, taxonomy, commerce hygiene, and feeds; this is the default for existing environments and demo runs. |
-| Content Quality | Richer descriptions, stronger titles, and deeper image coverage. |
-| Marketplace Readiness | Complete attributes and dependable feed data for external channels. |
-| Catalog Governance | Consistent attributes and disciplined taxonomy. |
+| Profile | Emphasis | Dimension weights | Semantic weight | Key thresholds |
+|---|---|---|---|---|
+| Balanced | Even coverage across content, structure, taxonomy, commerce hygiene, and feeds; this is the default for existing environments and demo runs. | Content 25%, structure 25%, taxonomy 15%, hygiene 20%, feed 15% | 15% | Description: 200 min / 500 good chars; images: 2 min; categories per channel tree: 5 max; title: 10-150 chars |
+| Content Quality | Richer descriptions, stronger titles, and deeper image coverage. | Content 40%, structure 20%, taxonomy 10%, hygiene 10%, feed 20% | 15% | Description: 300 min / 700 good chars; images: 3 min; categories per channel tree: 4 max; title: 15-120 chars |
+| Marketplace Readiness | Complete attributes and dependable feed data for external channels. | Content 20%, structure 25%, taxonomy 10%, hygiene 15%, feed 30% | 15% | Description: 250 min / 600 good chars; images: 3 min; categories per channel tree: 5 max; title: 12-150 chars |
+| Catalog Governance | Consistent attributes and disciplined taxonomy. | Content 15%, structure 30%, taxonomy 30%, hygiene 15%, feed 10% | 15% | Description: 200 min / 500 good chars; images: 2 min; categories per channel tree: 3 max; title: 10-120 chars |
 
 The current static definitions live in `packages/core/src/profiles.js`. Their
 shape is designed to support future user-created profiles, custom weights, and
