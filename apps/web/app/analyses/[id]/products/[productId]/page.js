@@ -7,7 +7,7 @@ import GradeLozenge from "@/components/GradeLozenge";
 import DimensionBars from "@/components/DimensionBars";
 import { ISSUE_INFO, issueLabel } from "@/components/issue-info";
 import { dimensionInfo } from "@/components/dimension-info";
-import { getAnalysisProducts, getEnvironment } from "@/lib/api-client";
+import { getAnalysisProducts, getEnvironment, refreshAnalysisProduct } from "@/lib/api-client";
 import ProductAiAnalysis, {
   ProductAiAnalysisAction,
   useProductAiAnalysis,
@@ -22,11 +22,52 @@ const SEMANTIC_CRITERIA = [
 ];
 const VERDICT_LABEL = { yes: "Yes", partial: "Partial", no: "No" };
 
+function RefreshConfirmModal({ productName, refreshing, onCancel, onConfirm }) {
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onCancel}>
+      <div
+        className="modal-card refresh-confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="refresh-confirm-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="modal-icon">
+          <ActionIcon name="refresh" />
+        </div>
+        <div>
+          <h2 id="refresh-confirm-title">Refresh product analysis?</h2>
+          <p>
+            This will fetch the current BigCommerce product, re-score{" "}
+            <strong>{productName}</strong>, and recompute the saved analysis totals.
+          </p>
+          <p className="muted">
+            Global score, grade distribution, issues, category rollups, and top fixes
+            will update to reflect this product refresh.
+          </p>
+          <div className="modal-actions">
+            <button type="button" className="secondary" onClick={onCancel} disabled={refreshing}>
+              Cancel
+            </button>
+            <button type="button" onClick={onConfirm} disabled={refreshing}>
+              <ActionIcon name="refresh" />
+              {refreshing ? "Refreshing…" : "Refresh analysis"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductDrilldownPage() {
   const { id, productId } = useParams();
   const [data, setData] = useState(null);
   const [storeHash, setStoreHash] = useState("");
   const [error, setError] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [showRefreshConfirm, setShowRefreshConfirm] = useState(false);
+  const [refreshStatus, setRefreshStatus] = useState("");
   const aiAnalysis = useProductAiAnalysis(id, productId);
 
   useEffect(() => {
@@ -43,6 +84,24 @@ export default function ProductDrilldownPage() {
   }, [environmentId]);
 
   const row = data?.rows.find((r) => String(r.id) === String(productId));
+
+  async function refreshProductAnalysis() {
+    setRefreshing(true);
+    setRefreshStatus("");
+    setError("");
+    try {
+      await refreshAnalysisProduct(id, productId);
+      const next = await getAnalysisProducts(id);
+      setData(next);
+      setRefreshStatus("Product analysis refreshed from BigCommerce.");
+    } catch (err) {
+      setRefreshStatus("");
+      setError(err.body?.error || "Could not refresh product analysis.");
+    } finally {
+      setRefreshing(false);
+      setShowRefreshConfirm(false);
+    }
+  }
 
   if (error || (data && !row)) {
     return (
@@ -157,9 +216,32 @@ export default function ProductDrilldownPage() {
             <ActionIcon name="download" />
             Export as PDF
           </a>
+          {data.environmentId !== "demo" && !data.sourceAnalysisId && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => setShowRefreshConfirm(true)}
+              disabled={refreshing}
+              title="Fetch this product from BigCommerce, re-score it, and recompute this analysis summary"
+            >
+              <ActionIcon name="refresh" />
+              {refreshing ? "Refreshing…" : "Refresh analysis"}
+            </button>
+          )}
           <ProductAiAnalysisAction state={aiAnalysis} />
         </div>
       </div>
+
+      {showRefreshConfirm && (
+        <RefreshConfirmModal
+          productName={row.name || `#${row.id}`}
+          refreshing={refreshing}
+          onCancel={() => !refreshing && setShowRefreshConfirm(false)}
+          onConfirm={refreshProductAnalysis}
+        />
+      )}
+
+      {refreshStatus && <p className="success-message">{refreshStatus}</p>}
 
       <div className="grid">
         <div className="card">

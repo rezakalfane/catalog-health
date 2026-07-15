@@ -55,6 +55,7 @@ export async function GET(request, { params }) {
   return NextResponse.json({
     analysisId: analysis.id,
     environmentId: analysis.environmentId,
+    sourceAnalysisId: analysis.sourceAnalysisId || null,
     createdAt: analysis.createdAt,
     categoryNames,
     categoryTrees,

@@ -112,7 +112,14 @@ npm run dev
   Each product detail can be exported as a comprehensive paginated PDF with
   product facts, scoring evidence, semantic findings, and the complete saved AI
   Analysis—including safely retrievable reviewed-image thumbnails—when one is
-  available.
+  available. For live BigCommerce analyses, a product detail can also refresh
+  that single product from BigCommerce, re-score it under the analysis's
+  captured scoring profile, re-run that product's semantic verdict when the
+  original semantic model configuration is still available, and recompute the
+  analysis-level summary so global score, grade, distributions, issues,
+  category rollups, and top fixes stay consistent. Unchanged product rows keep
+  their original captured product facts, including thumbnail URLs, while the
+  refreshed product receives the current BigCommerce facts.
 - **On-demand product AI Analysis** — from a product drill-down, use the LLM
   selected beside the action to generate a saved, merchant-ready review: prioritized
   fixes, revised title and descriptions, derived catalog fields, category and
@@ -129,6 +136,9 @@ npm run dev
   catalog data through image preparation, generation, validation, and saving.
   The saved review and product PDF retain the configuration name and underlying
   provider/model used, even if that configuration is later edited or removed.
+  When the product has a semantic review, the AI prompt includes each semantic
+  verdict and reason so title and description suggestions can explicitly close
+  gaps around what the product is, who it is for, and what it is made of.
   Reviewed suggestions that map cleanly to BigCommerce product APIs can be
   pushed back from the product page: title, HTML description, supported core
   fields, custom fields, existing categories, SEO/search values, image alt text,
@@ -451,6 +461,8 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
 - [x] Reviewed AI push actions for product fields, custom fields, categories,
       SEO/search values, related products, and image alt text, including
       section-level bulk push controls
+- [x] Refresh a single product from BigCommerce inside a completed live
+      analysis and recompute the analysis summary from the updated product row
 - [x] Swap JSON store for SQLite (better-sqlite3, WAL, versioned migrations,
       auto-import of the legacy db.json)
 - [x] Auth (Google SSO + dev login) and per-user multi-tenancy

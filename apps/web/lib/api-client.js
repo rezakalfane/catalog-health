@@ -139,6 +139,13 @@ export function getAnalysisProducts(id) {
   return request(`/api/analyses/${id}/products`);
 }
 
+/** Refresh one product from BigCommerce and recompute this analysis summary. */
+export function refreshAnalysisProduct(analysisId, productId) {
+  return request(`/api/analyses/${analysisId}/products/${productId}/refresh`, {
+    method: "POST",
+  });
+}
+
 /** Load the saved AI product review and current provider readiness. */
 export function getProductAiAnalysis(analysisId, productId) {
   return request(`/api/analyses/${analysisId}/products/${productId}/ai-analysis`);

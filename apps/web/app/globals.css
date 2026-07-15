@@ -645,6 +645,46 @@ a.progress-link:hover .progress-top { color: var(--signal); }
 
 .muted { color: var(--ink-soft); font-size: 0.88rem; }
 .error { color: var(--grade-f); font-size: 0.9rem; }
+.success-message { color: var(--grade-a); font-weight: 650; }
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.42);
+}
+.modal-card {
+  display: flex;
+  gap: 0.9rem;
+  width: min(34rem, 100%);
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+.modal-card h2 { margin: 0 0 0.45rem; }
+.modal-card p { margin: 0 0 0.7rem; }
+.modal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: #e9edff;
+  color: var(--signal);
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
 .page-head {
   display: flex;
   flex-direction: column;

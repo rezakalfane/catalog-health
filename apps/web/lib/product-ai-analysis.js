@@ -168,7 +168,10 @@ function promptFor(context, imageCount) {
   return `Review this product comprehensively. Return the strongest actionable
 recommendations, not generic ecommerce advice. The request includes ${imageCount}
 visually inspectable image(s). Existing automated health issues are context, not
-absolute truth.\n\n<product_data>\n${JSON.stringify(safe)}\n</product_data>`;
+absolute truth. If semanticReview is present, use it to improve the title,
+short description, and rewrittenDescription so the copy better answers the
+failed or partial semantic questions: what the product is, who it is for, and
+what it is made of or specified by.\n\n<product_data>\n${JSON.stringify(safe)}\n</product_data>`;
 }
 
 function escapeHtml(value) {

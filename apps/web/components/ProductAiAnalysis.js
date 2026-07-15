@@ -530,7 +530,6 @@ export default function ProductAiAnalysis({ state, product }) {
                 state,
                 changeId: "description.rewrittenDescription",
                 label: "rewritten product description",
-                repushable: true,
               }}
               html
             />

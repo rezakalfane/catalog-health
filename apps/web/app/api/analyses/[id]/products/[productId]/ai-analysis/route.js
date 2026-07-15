@@ -82,6 +82,27 @@ function compactProduct(product, row) {
   };
 }
 
+function semanticContext(analysis, row) {
+  if (!row.semantic) return null;
+  const questions = [
+    ["what_it_is", "What is it?"],
+    ["who_its_for", "Who's it for?"],
+    ["made_of", "What's it made of?"],
+  ];
+  return {
+    judge: analysis.catalog?.semanticJudge || analysis.scoringMetadata?.semantic?.judgeLabel || null,
+    score: row.scores?.semantic ?? null,
+    questions: questions.map(([key, label]) => ({
+      key,
+      label,
+      verdict: row.semantic?.[key]?.verdict || "no",
+      reason: row.semantic?.[key]?.reason || "",
+      needsImprovement: row.semantic?.[key]?.verdict !== "yes",
+    })),
+    unevaluated: Boolean(row.semantic.unevaluated),
+  };
+}
+
 function imageUrls(product) {
   return (product?.images || [])
     .map((image) => image.url_zoom || image.url_standard || image.url_thumbnail)
@@ -658,6 +679,7 @@ export async function POST(request, { params }) {
               sourceWarning: source.warning,
               analyzedSnapshotAt: analysis.createdAt,
               product,
+              semanticReview: semanticContext(analysis, row),
               productRecommendationCandidates: recommendationCandidates,
               categories: categoryContext(analysis, row),
               health: {
