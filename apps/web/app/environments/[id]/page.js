@@ -25,6 +25,8 @@ import AnalysisExportActions from "@/components/AnalysisExportActions";
 
 export const dynamic = "force-dynamic";
 
+const SCORE_HISTORY_LIMIT = 30;
+
 export default async function EnvironmentDetail({ params }) {
   const user = await requireUser();
   const { id } = await params;
@@ -36,7 +38,8 @@ export default async function EnvironmentDetail({ params }) {
   const analyses = listCompletedAnalyses(user.id, id); // newest first
   const catalogAnalyses = analyses.filter((analysis) => !analysis.sourceAnalysisId);
   const latest = catalogAnalyses[0];
-  const history = [...catalogAnalyses]
+  const history = catalogAnalyses
+    .slice(0, SCORE_HISTORY_LIMIT)
     .reverse()
     .map((a) => ({
       id: a.id,

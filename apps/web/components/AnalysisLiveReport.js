@@ -23,6 +23,33 @@ function SkeletonLines({ count = 4 }) {
   );
 }
 
+const GRADE_ORDER = ["A", "B", "C", "D", "F"];
+
+function GradeDistributionChart({ distribution }) {
+  const max = Math.max(1, ...GRADE_ORDER.map((grade) => distribution[grade] || 0));
+
+  return (
+    <div className="grade-distribution-chart" aria-label="Product grade distribution">
+      {GRADE_ORDER.map((grade) => {
+        const count = distribution[grade] || 0;
+        const height = Math.max(4, Math.round((count / max) * 100));
+        return (
+          <div className="grade-distribution-column" key={grade}>
+            <span className="grade-distribution-count">{count}</span>
+            <div className="grade-distribution-bar-track" aria-hidden="true">
+              <span
+                className={`grade-distribution-bar ${grade}`}
+                style={{ height: `${height}%` }}
+              />
+            </div>
+            <span className={`grade-distribution-label ${grade}`}>{grade}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
  * Polls an analysis and renders its report sections, showing skeletons that
  * fill in as the run progresses. Used by the analysis page and embedded on
@@ -130,14 +157,7 @@ export default function AnalysisLiveReport({ analysisId, onAnalysis }) {
             <InfoPopover title="Grade distribution">{sectionInfo.gradeDistribution}</InfoPopover>
           </h2>
           {summary.gradeDist ? (
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-              {Object.entries(summary.gradeDist).map(([g, count]) => (
-                <div key={g} style={{ textAlign: "center" }}>
-                  <GradeLozenge grade={g} small />
-                  <div className="muted" style={{ marginTop: "0.2rem" }}>{count}</div>
-                </div>
-              ))}
-            </div>
+            <GradeDistributionChart distribution={summary.gradeDist} />
           ) : (
             <SkeletonLines count={2} />
           )}

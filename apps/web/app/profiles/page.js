@@ -7,6 +7,7 @@ import {
   listScoringProfiles,
   saveScoringProfile,
 } from "@/lib/api-client";
+import ActionIcon from "@/components/ActionIcon";
 
 const DIMENSIONS = [
   ["content", "Content"],
@@ -150,8 +151,26 @@ function ProfileTable({ profiles, empty, onEdit, onRemove }) {
               <td>{profile.version}</td>
               <td>{profile.environmentCount}</td>
               <td className="profile-table-actions">
-                <button type="button" className="secondary" onClick={() => onEdit(profile)}>{profile.builtIn ? "View / edit" : "Edit"}</button>
-                {!profile.builtIn && <button type="button" className="danger" onClick={() => onRemove(profile)}>Remove</button>}
+                <button
+                  type="button"
+                  className="settings-edit-button"
+                  onClick={() => onEdit(profile)}
+                  aria-label={`${profile.builtIn ? "View" : "Edit"} profile ${profile.label}`}
+                  title={profile.builtIn ? "View profile" : "Edit profile"}
+                >
+                  <ActionIcon name="edit" />
+                </button>
+                {!profile.builtIn && (
+                  <button
+                    type="button"
+                    className="delete-analysis-button icon-only"
+                    onClick={() => onRemove(profile)}
+                    aria-label={`Delete profile ${profile.label}`}
+                    title="Delete profile"
+                  >
+                    <ActionIcon name="trash" />
+                  </button>
+                )}
               </td>
             </tr>
           ))}
