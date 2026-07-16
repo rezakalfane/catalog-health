@@ -40,6 +40,15 @@ export default async function Dashboard() {
     latestByEnv.set(a.environmentId, a);
   }
 
+  environments.sort((a, b) => {
+    const aLatest = latestByEnv.get(a.id);
+    const bLatest = latestByEnv.get(b.id);
+    if (!aLatest && !bLatest) return 0;
+    if (!aLatest) return 1;
+    if (!bLatest) return -1;
+    return new Date(bLatest.createdAt) - new Date(aLatest.createdAt);
+  });
+
   return (
     <>
       <div className="page-head">
