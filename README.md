@@ -385,6 +385,122 @@ Labels and fix hints for each live in `apps/web/components/issue-info.js`.
 
 ## Data & security notes
 
+```mermaid
+erDiagram
+    users ||--o{ environments : "owns"
+    users ||--o{ analyses : "owns"
+    users ||--o{ settings : "owns"
+    users ||--o{ llm_models : "owns"
+    users ||--o{ scoring_profiles : "owns"
+    environments ||--o{ analyses : "environment_id (no FK)"
+    analyses ||--o{ analysis_products : "analysis_id (CASCADE)"
+    analyses ||--o{ product_ai_analyses : "analysis_id (CASCADE)"
+    analyses |o--o{ analyses : "source_analysis_id"
+
+    users {
+        TEXT id PK
+        TEXT email UK
+        TEXT name
+        TEXT created_at
+    }
+
+    environments {
+        TEXT id PK
+        TEXT name
+        TEXT store_hash
+        TEXT access_token
+        TEXT created_at
+        TEXT user_id FK
+        TEXT scoring_profile_id
+    }
+
+    analyses {
+        TEXT id PK
+        TEXT environment_id "no FK: demo is a pseudo-environment"
+        TEXT created_at
+        TEXT status
+        TEXT progress "JSON"
+        TEXT summary "JSON"
+        TEXT catalog "JSON"
+        TEXT error
+        TEXT warning
+        TEXT user_id FK
+        INTEGER duration_ms
+        INTEGER semantic_ms
+        TEXT scoring_metadata "JSON"
+        TEXT source_analysis_id FK
+    }
+
+    analysis_products {
+        TEXT analysis_id PK "FK -> analyses.id"
+        INTEGER product_id PK
+        TEXT name
+        TEXT sku
+        INTEGER overall
+        TEXT grade
+        REAL impact
+        INTEGER view_count
+        INTEGER total_sold
+        TEXT scores "JSON"
+        TEXT issues "JSON array"
+        TEXT categories "JSON array"
+        TEXT details "JSON"
+        TEXT semantic "JSON"
+    }
+
+    settings {
+        TEXT user_id PK
+        TEXT key PK
+        TEXT value "JSON"
+    }
+
+    product_ai_analyses {
+        TEXT analysis_id PK "FK -> analyses.id"
+        INTEGER product_id PK
+        TEXT provider
+        TEXT model
+        TEXT source
+        INTEGER image_analysis
+        TEXT result "JSON"
+        TEXT generated_at
+        TEXT model_configuration_id
+        TEXT model_configuration_name
+    }
+
+    llm_models {
+        TEXT id PK
+        TEXT user_id
+        TEXT name
+        TEXT provider
+        TEXT model
+        TEXT api_key
+        TEXT base_url
+        INTEGER is_default "unique per user where 1"
+        TEXT created_at
+        TEXT updated_at
+    }
+
+    scoring_profiles {
+        TEXT id PK
+        TEXT user_id
+        TEXT label
+        TEXT description
+        TEXT dimension_weights "JSON"
+        REAL semantic_weight
+        TEXT thresholds "JSON"
+        INTEGER revision
+        TEXT created_at
+        TEXT updated_at
+    }
+```
+
+*Source: [`docs/db-schema.mmd`](docs/db-schema.mmd); a rendered PNG is kept at
+[`docs/images/db-schema.png`](docs/images/db-schema.png) for reference —
+regenerate it with
+`npx @mermaid-js/mermaid-cli -i docs/db-schema.mmd -o docs/images/db-schema.png -b white -s 3`
+after editing `MIGRATIONS` in `apps/web/lib/sqlite.js` (and keep both copies
+of the diagram in sync).*
+
 - Data persists to `data/catalog-health.sqlite` (better-sqlite3, WAL mode).
   `apps/web/lib/db.js` is the only data-access surface — every page and API
   route goes through it — and `apps/web/lib/sqlite.js` owns the connection,
