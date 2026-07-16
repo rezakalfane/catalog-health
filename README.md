@@ -1,4 +1,4 @@
-# Catalog Health
+# BigCommerce Catalog Health
 
 Internal tool for CSMs and merchandising strategists: analyze a BigCommerce
 store's catalog health and AI-readiness, track it over time, and get a
